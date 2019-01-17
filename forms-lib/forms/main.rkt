@@ -29,8 +29,7 @@
   [ok? (-> any/c boolean?)]
   [err (-> any/c res/c)]
   [err? (-> any/c boolean?)]
-  [check (->* () #:rest (listof (-> any/c res/c)) formlet/c)]
-  [~> (->* () #:rest (listof (-> any/c res/c)) formlet/c)]))
+  [ensure (->* () #:rest (listof formlet/c) formlet/c)]))
 
 (define (ok v)
   (cons 'ok v))
@@ -56,12 +55,10 @@
     [(ok? res) res]
     [else (fb v)]))
 
-(define (check . fs)
+(define (ensure . fs)
   (for/fold ([g ok])
             ([f fs])
     (and-then g f)))
-
-(define ~> check)
 
 
 ;; Formlets ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -137,7 +134,7 @@
   (alternative binding/text field/text))
 
 (define email
-  (~> text (matches #rx".+@.+")))
+  (ensure text (matches #rx".+@.+")))
 
 (module+ test
   (require rackunit)
@@ -147,18 +144,18 @@
     (check-equal? (text "a") (ok "a")))
 
   (test-case "formlets compose with one another"
-    (check-equal? ((text . and-then . (required)) #f) (err "This field is required."))
-    (check-equal? ((~> text (required)) "a") (ok "a"))
-    (check-equal? ((~> text (required) (longer-than 3)) #f) (err "This field is required."))
-    (check-equal? ((~> text (required) (longer-than 3)) "a") (err "This field must contain 4 or more characters."))
-    (check-equal? ((~> text (required) (longer-than 3)) "abcd") (ok "abcd"))
-    (check-equal? ((~> text (to-number)) #f) (ok #f))
-    (check-equal? ((~> text (to-number)) "a") (err "This field must contain a number."))
-    (check-equal? ((~> text (to-number)) "10.5") (ok 10.5))
-    (check-equal? ((~> text to-boolean) #f) (ok #f))
-    (check-equal? ((~> text to-boolean) "whatever") (ok #t))
-    (check-equal? ((~> text to-symbol) #f) (ok #f))
-    (check-equal? ((~> text to-symbol) "a-b-c") (ok 'a-b-c))))
+    (check-equal? ((ensure text (required)) #f) (err "This field is required."))
+    (check-equal? ((ensure text (required)) "a") (ok "a"))
+    (check-equal? ((ensure text (required) (longer-than 3)) #f) (err "This field is required."))
+    (check-equal? ((ensure text (required) (longer-than 3)) "a") (err "This field must contain 4 or more characters."))
+    (check-equal? ((ensure text (required) (longer-than 3)) "abcd") (ok "abcd"))
+    (check-equal? ((ensure text (to-number)) #f) (ok #f))
+    (check-equal? ((ensure text (to-number)) "a") (err "This field must contain a number."))
+    (check-equal? ((ensure text (to-number)) "10.5") (ok 10.5))
+    (check-equal? ((ensure text to-boolean) #f) (ok #f))
+    (check-equal? ((ensure text to-boolean) "whatever") (ok #t))
+    (check-equal? ((ensure text to-symbol) #f) (ok #f))
+    (check-equal? ((ensure text to-symbol) "a-b-c") (ok 'a-b-c))))
 
 
 ;; Forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -265,8 +262,8 @@
     #:transparent)
 
   (define login-form
-    (form* ([username (~> text (required) (matches #rx".+@.+"))]
-            [password (~> text (required) (longer-than 8))])
+    (form* ([username (ensure text (required) (matches #rx".+@.+"))]
+            [password (ensure text (required) (longer-than 8))])
      (login-data username password)))
 
   (define valid-data
@@ -303,8 +300,8 @@
   (struct release (author package) #:transparent)
 
   (define author-form
-    (form* ([name (~> text (required))]
-            [email (~> email (required))])
+    (form* ([name (ensure text (required))]
+            [email (ensure email (required))])
       (author name email)))
 
   (define (parse-version v)
@@ -314,8 +311,8 @@
         (ok version)))
 
   (define package-form
-    (form* ([name (~> text (required))]
-            [version (~> text (required) parse-version)])
+    (form* ([name (ensure text (required))]
+            [version (ensure text (required) parse-version)])
       (package name version)))
 
   (define release-form

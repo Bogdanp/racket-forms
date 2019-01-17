@@ -10,7 +10,7 @@
 (struct release (author package) #:transparent)
 
 (define author-form
-  (form* ([name (~> text (required) (longer-than 3))]
+  (form* ([name (ensure text (required) (longer-than 3))]
           [email email])
     (author name email)))
 
@@ -21,8 +21,8 @@
       (ok version)))
 
 (define package-form
-  (form* ([name (~> text (required) (longer-than 3))]
-          [version (~> text (required) (longer-than 1) parse-version)])
+  (form* ([name (ensure text (required) (longer-than 3))]
+          [version (ensure text (required) (longer-than 1) parse-version)])
     (package name version)))
 
 (define release-form
