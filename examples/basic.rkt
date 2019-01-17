@@ -8,8 +8,8 @@
 (struct signup-data (username password))
 
 (define signup-form
-  (form* ([username (~> text-binding (required) (matches #rx".+@.+"))]
-          [password (~> text-binding (required) (longer-than 8))])
+  (form* ([username (~> text (required) (matches #rx".+@.+"))]
+          [password (~> text (required) (longer-than 8))])
    (signup-data username password)))
 
 (define (render-signup-form render-widget)

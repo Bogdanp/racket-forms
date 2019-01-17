@@ -49,6 +49,12 @@
     [(ok? res) (fb (cdr res))]
     [else res]))
 
+(define ((alternative fa fb) v)
+  (define res (fa v))
+  (cond
+    [(ok? res) res]
+    [else (fb v)]))
+
 (define (check . fs)
   (for/fold ([g ok])
             ([f fs])
@@ -69,9 +75,9 @@
   [to-number (->* () (#:message string?) formlet/c)]
   [to-symbol formlet/c]
 
-  [boolean-binding formlet/c]
-  [text-binding formlet/c]
-  [text-field formlet/c]))
+  [binding/text formlet/c]
+  [field/text formlet/c]
+  [text formlet/c]))
 
 (define ((lift f) v)
   (if v
@@ -113,39 +119,41 @@
 (define (to-symbol v)
   (ok (and v (string->symbol v))))
 
-(define (text-binding v)
-  (if (binding:form? v)
+(define binding/text
+  (lift (lambda (v)
+          (if (binding:form? v)
               (ok (bytes->string/utf-8 (binding:form-value v)))
-              (ok #f)))
+              (err "Expected a binding:form field.")))))
 
-(define boolean-binding
-  (~> text-binding to-boolean))
+(define field/text
+  (lift (lambda (v)
+          (if (string? v)
+              (ok v)
+              (err "Expected a text field.")))))
 
-(define (text-field v)
-  (if (string? v)
-      (ok v)
-      (ok #f)))
+(define text
+  (alternative binding/text field/text))
 
 (module+ test
   (require rackunit)
 
   (test-case "primitives"
-    (check-equal? (text-field #f) (ok #f))
-    (check-equal? (text-field "a") (ok "a")))
+    (check-equal? (text #f) (ok #f))
+    (check-equal? (text "a") (ok "a")))
 
   (test-case "formlets compose with one another"
-    (check-equal? ((text-field . and-then . (required)) #f) (err "This field is required."))
-    (check-equal? ((~> text-field (required)) "a") (ok "a"))
-    (check-equal? ((~> text-field (required) (longer-than 3)) #f) (err "This field is required."))
-    (check-equal? ((~> text-field (required) (longer-than 3)) "a") (err "This field must contain 4 or more characters."))
-    (check-equal? ((~> text-field (required) (longer-than 3)) "abcd") (ok "abcd"))
-    (check-equal? ((~> text-field (to-number)) #f) (ok #f))
-    (check-equal? ((~> text-field (to-number)) "a") (err "This field must contain a number."))
-    (check-equal? ((~> text-field (to-number)) "10.5") (ok 10.5))
-    (check-equal? ((~> text-field to-boolean) #f) (ok #f))
-    (check-equal? ((~> text-field to-boolean) "whatever") (ok #t))
-    (check-equal? ((~> text-field to-symbol) #f) (ok #f))
-    (check-equal? ((~> text-field to-symbol) "a-b-c") (ok 'a-b-c))))
+    (check-equal? ((text . and-then . (required)) #f) (err "This field is required."))
+    (check-equal? ((~> text (required)) "a") (ok "a"))
+    (check-equal? ((~> text (required) (longer-than 3)) #f) (err "This field is required."))
+    (check-equal? ((~> text (required) (longer-than 3)) "a") (err "This field must contain 4 or more characters."))
+    (check-equal? ((~> text (required) (longer-than 3)) "abcd") (ok "abcd"))
+    (check-equal? ((~> text (to-number)) #f) (ok #f))
+    (check-equal? ((~> text (to-number)) "a") (err "This field must contain a number."))
+    (check-equal? ((~> text (to-number)) "10.5") (ok 10.5))
+    (check-equal? ((~> text to-boolean) #f) (ok #f))
+    (check-equal? ((~> text to-boolean) "whatever") (ok #t))
+    (check-equal? ((~> text to-symbol) #f) (ok #f))
+    (check-equal? ((~> text to-symbol) "a-b-c") (ok 'a-b-c))))
 
 
 ;; Forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -252,8 +260,8 @@
     #:transparent)
 
   (define login-form
-    (form* ([username (~> text-binding (required) (matches #rx".+@.+"))]
-            [password (~> text-binding (required) (longer-than 8))])
+    (form* ([username (~> text (required) (matches #rx".+@.+"))]
+            [password (~> text (required) (longer-than 8))])
      (login-data username password)))
 
   (define valid-data
