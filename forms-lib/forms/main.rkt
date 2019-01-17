@@ -61,8 +61,6 @@
 
 (provide
  (contract-out
-  [text-binding (->* () (#:message string? #:decoder (-> bytes? string?)) formlet/c)]
-  [text-field (->* () (#:message string?) formlet/c)]
   [required (->* () (#:message string?) formlet/c)]
   [matches (->* (regexp?) (#:message string?) formlet/c)]
   [shorter-than (->* (exact-positive-integer?) (#:message string?) formlet/c)]
@@ -71,26 +69,14 @@
   [to-number (->* () (#:message string?) formlet/c)]
   [to-symbol formlet/c]
 
-  [boolean formlet/c]
-  [text formlet/c]))
+  [boolean-binding formlet/c]
+  [text-binding formlet/c]
+  [text-field formlet/c]))
 
 (define ((lift f) v)
   (if v
       (f v)
       (ok v)))
-
-(define (text-binding #:message [message "This field must contain some text."]
-                      #:decoder [decode bytes->string/utf-8])
-  (lift (lambda (v)
-          (if (binding:form? v)
-              (ok (decode (binding:form-value v)))
-              (err message)))))
-
-(define (text-field #:message [message "This field must contain some text."])
-  (lift (lambda (v)
-          (if (string? v)
-              (ok v)
-              (err message)))))
 
 (define ((required #:message [message "This field is required."]) v)
   (or (and v (ok v))
@@ -127,29 +113,39 @@
 (define (to-symbol v)
   (ok (and v (string->symbol v))))
 
-(define boolean (~> (text-binding) to-boolean))
-(define text (text-binding))
+(define (text-binding v)
+  (if (binding:form? v)
+              (ok (bytes->string/utf-8 (binding:form-value v)))
+              (ok #f)))
+
+(define boolean-binding
+  (~> text-binding to-boolean))
+
+(define (text-field v)
+  (if (string? v)
+      (ok v)
+      (ok #f)))
 
 (module+ test
   (require rackunit)
 
   (test-case "primitives"
-    (check-equal? ((text-field) #f) (ok #f))
-    (check-equal? ((text-field) "a") (ok "a")))
+    (check-equal? (text-field #f) (ok #f))
+    (check-equal? (text-field "a") (ok "a")))
 
   (test-case "formlets compose with one another"
-    (check-equal? (((text-field) . and-then . (required)) #f) (err "This field is required."))
-    (check-equal? ((~> (text-field) (required)) "a") (ok "a"))
-    (check-equal? ((~> (text-field) (required) (longer-than 3)) #f) (err "This field is required."))
-    (check-equal? ((~> (text-field) (required) (longer-than 3)) "a") (err "This field must contain 4 or more characters."))
-    (check-equal? ((~> (text-field) (required) (longer-than 3)) "abcd") (ok "abcd"))
-    (check-equal? ((~> (text-field) (to-number)) #f) (ok #f))
-    (check-equal? ((~> (text-field) (to-number)) "a") (err "This field must contain a number."))
-    (check-equal? ((~> (text-field) (to-number)) "10.5") (ok 10.5))
-    (check-equal? ((~> (text-field) to-boolean) #f) (ok #f))
-    (check-equal? ((~> (text-field) to-boolean) "whatever") (ok #t))
-    (check-equal? ((~> (text-field) to-symbol) #f) (ok #f))
-    (check-equal? ((~> (text-field) to-symbol) "a-b-c") (ok 'a-b-c))))
+    (check-equal? ((text-field . and-then . (required)) #f) (err "This field is required."))
+    (check-equal? ((~> text-field (required)) "a") (ok "a"))
+    (check-equal? ((~> text-field (required) (longer-than 3)) #f) (err "This field is required."))
+    (check-equal? ((~> text-field (required) (longer-than 3)) "a") (err "This field must contain 4 or more characters."))
+    (check-equal? ((~> text-field (required) (longer-than 3)) "abcd") (ok "abcd"))
+    (check-equal? ((~> text-field (to-number)) #f) (ok #f))
+    (check-equal? ((~> text-field (to-number)) "a") (err "This field must contain a number."))
+    (check-equal? ((~> text-field (to-number)) "10.5") (ok 10.5))
+    (check-equal? ((~> text-field to-boolean) #f) (ok #f))
+    (check-equal? ((~> text-field to-boolean) "whatever") (ok #t))
+    (check-equal? ((~> text-field to-symbol) #f) (ok #f))
+    (check-equal? ((~> text-field to-symbol) "a-b-c") (ok 'a-b-c))))
 
 
 ;; Forms ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -256,8 +252,8 @@
     #:transparent)
 
   (define login-form
-    (form* ([username (~> (text-binding) (required) (matches #rx".+@.+"))]
-            [password (~> (text-binding) (required) (longer-than 8))])
+    (form* ([username (~> text-binding (required) (matches #rx".+@.+"))]
+            [password (~> text-binding (required) (longer-than 8))])
      (login-data username password)))
 
   (define valid-data
