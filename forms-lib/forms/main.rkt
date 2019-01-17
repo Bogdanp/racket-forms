@@ -256,9 +256,8 @@
     #:transparent)
 
   (define login-form
-    (form*
-     ([username (~> (text-binding) (required) (matches #rx".+@.+"))]
-      [password (~> (text-binding) (required) (longer-than 8))])
+    (form* ([username (~> (text-binding) (required) (matches #rx".+@.+"))]
+            [password (~> (text-binding) (required) (longer-than 8))])
      (login-data username password)))
 
   (define valid-data
