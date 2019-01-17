@@ -15,9 +15,10 @@
 (define res/c (cons/c (or/c 'ok 'err) any/c))
 (define formlet/c (-> any/c res/c))
 (define widget/c (-> string? (or/c false/c binding?) errors/c (or/c xexpr/c (listof xexpr/c))))
-(define validation/c (or/c (list/c 'passed any/c (-> string? widget/c (or/c xexpr/c (listof xexpr/c))))
-                           (list/c 'failed any/c (-> string? widget/c (or/c xexpr/c (listof xexpr/c))))
-                           (list/c 'pending false/c (-> string? widget/c (or/c xexpr/c (listof xexpr/c))))))
+(define widget-renderer/c (-> string? widget/c (or/c xexpr/c (listof xexpr/c))))
+(define validation/c (or/c (list/c 'passed any/c widget-renderer/c)
+                           (list/c 'failed any/c widget-renderer/c)
+                           (list/c 'pending false/c widget-renderer/c)))
 
 
 ;; Primitives ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -77,7 +78,8 @@
 
   [binding/text formlet/c]
   [field/text formlet/c]
-  [text formlet/c]))
+  [text formlet/c]
+  [email formlet/c]))
 
 (define ((lift f) v)
   (if v
@@ -133,6 +135,9 @@
 
 (define text
   (alternative binding/text field/text))
+
+(define email
+  (~> text (matches #rx".+@.+")))
 
 (module+ test
   (require rackunit)
@@ -291,15 +296,69 @@
 
     (check-match
      (form-process login-form valid-data)
-     (list 'passed (login-data "bogdan@example" "hunter1234") procedure?))))
+     (list 'passed (login-data "bogdan@example" "hunter1234") procedure?)))
+
+  (struct author (name email) #:transparent)
+  (struct package (name version) #:transparent)
+  (struct release (author package) #:transparent)
+
+  (define author-form
+    (form* ([name (~> text (required))]
+            [email (~> email (required))])
+      (author name email)))
+
+  (define (parse-version v)
+    (define version (map string->number (string-split v ".")))
+    (if (member #f version)
+        (err "Invalid version.")
+        (ok version)))
+
+  (define package-form
+    (form* ([name (~> text (required))]
+            [version (~> text (required) parse-version)])
+      (package name version)))
+
+  (define release-form
+    (form* ([author author-form]
+            [package package-form])
+      (release author package)))
+
+  (test-case "composite forms can validate their inputs"
+    (check-equal?
+     (form-validate release-form (hash))
+     (err '((author . ((name . "This field is required.")
+                       (email . "This field is required.")))
+            (package . ((name . "This field is required.")
+                        (version . "This field is required."))))))
+
+    (check-equal?
+     (form-validate release-form (hash "author.name" "Bogdan Popa"
+                                       "author.email" "bogdan@defn.io"
+                                       "package.name" "forms"
+                                       "package.version" "a"))
+     (err '((package . ((version . "Invalid version."))))))
+
+    (check-equal?
+     (form-validate release-form (hash "author.name" "Bogdan Popa"
+                                       "author.email" "bogdan@defn.io"
+                                       "package.name" "forms"
+                                       "package.version" "1.5.3"))
+     (ok (release (author "Bogdan Popa" "bogdan@defn.io")
+                  (package "forms" '(1 5 3)))))))
 
 
 ;; Widgets ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(provide widget-errors
+(provide widget-namespace
+         widget-errors
          widget-input
+         widget-email
          widget-text
          widget-password)
+
+(define/contract ((widget-namespace namespace widget-renderer) name widget)
+  (-> string? widget-renderer/c widget-renderer/c)
+  (widget-renderer (string-append namespace "." name) widget))
 
 (define/contract ((widget-errors #:class [class "errors"]) name value errors)
   (->* () (#:class string?) widget/c)
@@ -350,6 +409,23 @@
            ,@(optionally 'minlength min-length)
            ,@(optionally 'maxlength max-length)
            ,@(optionally 'value value))))
+
+(define/contract (widget-email #:class [class #f]
+                               #:required? [required? #f]
+                               #:disabled? [disabled? #f]
+                               #:min-length [min-length #f]
+                               #:max-length [max-length #f])
+  (->* () (#:class (or/c false/c string?)
+           #:required? boolean?
+           #:disabled? boolean?
+           #:min-length (or/c false/c exact-positive-integer?)
+           #:max-length (or/c false/c exact-positive-integer?)) widget/c)
+
+  (widget-input #:type "email"
+                #:required? required?
+                #:disabled? disabled?
+                #:min-length min-length
+                #:max-length max-length))
 
 (define/contract (widget-text #:class [class #f]
                               #:required? [required? #f]
@@ -428,4 +504,46 @@
         '(form ((action "")
                 (method "POST"))
                (label "Username" (input ((type "text") (name "username") (value "bogdan@example"))))
-               (label "Password" (input ((type "password") (name "password"))))))])))
+               (label "Password" (input ((type "password") (name "password"))))))]))
+
+  (define (render-author-form render-widget)
+    `(div (label "Name" ,(render-widget "name" (widget-text)))
+          ,@(render-widget "name" (widget-errors))
+          (label "Email" ,(render-widget "email" (widget-email)))
+          ,@(render-widget "email" (widget-errors))))
+
+  (define (render-package-form render-widget)
+    `(div (label "Name" ,(render-widget "name" (widget-text)))
+          ,@(render-widget "name" (widget-errors))
+          (label "Version" ,(render-widget "version" (widget-text)))
+          ,@(render-widget "version" (widget-errors))))
+
+  (define (render-release-form render-widget)
+    `(form ((action "")
+            (method "POST"))
+           (fieldset
+            (legend "Author")
+            ,(render-author-form (widget-namespace "author" render-widget)))
+           (fieldset
+            (legend "Package")
+            ,(render-package-form (widget-namespace "package" render-widget)))
+           (button ((type "submit")) "Save")))
+
+  (test-case "complex forms can be rendered"
+    (match (form-process release-form (hash) #f)
+      [(list 'pending _ render-widget)
+       (check-equal?
+        (render-release-form render-widget)
+        '(form ((action "")
+                (method "POST"))
+               (fieldset
+                (legend "Author")
+                (div
+                 (label "Name" (input ((type "text") (name "author.name"))))
+                 (label "Email" (input ((type "email") (name "author.email"))))))
+               (fieldset
+                (legend "Package")
+                (div
+                 (label "Name" (input ((type "text") (name "package.name"))))
+                 (label "Version" (input ((type "text") (name "package.version"))))))
+               (button ((type "submit")) "Save")))])))
