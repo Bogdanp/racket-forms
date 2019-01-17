@@ -313,12 +313,14 @@
 
 (define/contract ((widget-input #:type [type "text"]
                                 #:class [class #f]
+                                #:omit-value? [omit-value? #f]
                                 #:required? [required? #f]
                                 #:disabled? [disabled? #f]
                                 #:min-length [min-length #f]
                                 #:max-length [max-length #f]) name binding _)
   (->* () (#:type string?
            #:class (or/c false/c string?)
+           #:omit-value? boolean?
            #:required? boolean?
            #:disabled? boolean?
            #:min-length (or/c false/c exact-positive-integer?)
@@ -326,17 +328,20 @@
 
   (define (optionally attribute value)
     (cond
-      [value (cons attribute value)]
+      [value (list (list attribute value))]
       [else null]))
+
+  (define value
+    (and (not omit-value?) binding (bytes->string/utf-8 (binding:form-value binding))))
 
   `(input ((type ,type)
            (name ,name)
-           ,@(optionally "class" class)
-           ,@(optionally "required" (and required? "required"))
-           ,@(optionally "disabled" (and disabled? "disabled"))
-           ,@(optionally "minlength" min-length)
-           ,@(optionally "maxlength" max-length)
-           (value ,(or (and binding (bytes->string/utf-8 (binding:form-value binding))) "")))))
+           ,@(optionally 'class class)
+           ,@(optionally 'required (and required? "required"))
+           ,@(optionally 'disabled (and disabled? "disabled"))
+           ,@(optionally 'minlength min-length)
+           ,@(optionally 'maxlength max-length)
+           ,@(optionally 'value value))))
 
 (define/contract (widget-text #:class [class #f]
                               #:required? [required? #f]
@@ -366,6 +371,7 @@
            #:max-length (or/c false/c exact-positive-integer?)) widget/c)
 
   (widget-input #:type "password"
+                #:omit-value? #t
                 #:required? required?
                 #:disabled? disabled?
                 #:min-length min-length
@@ -390,8 +396,8 @@
         (render-login-form render-widget)
         '(form ((action "")
                 (method "POST"))
-               (label "Username" (input ((type "text") (name "username") (value ""))))
-               (label "Password" (input ((type "password") (name "password") (value ""))))))]))
+               (label "Username" (input ((type "text") (name "username"))))
+               (label "Password" (input ((type "password") (name "password"))))))]))
 
   (test-case "failed forms can be rendered"
     (match (form-process login-form (hash "password" (make-binding "hunter1234")))
@@ -400,9 +406,9 @@
         (render-login-form render-widget)
         '(form ((action "")
                 (method "POST"))
-               (label "Username" (input ((type "text") (name "username") (value ""))))
+               (label "Username" (input ((type "text") (name "username"))))
                (ul ((class "errors")) (li "This field is required."))
-               (label "Password" (input ((type "password") (name "password") (value "hunter1234"))))))]))
+               (label "Password" (input ((type "password") (name "password"))))))]))
 
   (test-case "passed forms can be rendered"
     (match (form-process login-form (hash "username" (make-binding "bogdan@example")
@@ -414,4 +420,4 @@
         '(form ((action "")
                 (method "POST"))
                (label "Username" (input ((type "text") (name "username") (value "bogdan@example"))))
-               (label "Password" (input ((type "password") (name "password") (value "hunter1234"))))))])))
+               (label "Password" (input ((type "password") (name "password"))))))])))
