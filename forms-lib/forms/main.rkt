@@ -265,8 +265,8 @@
      (login-data username password)))
 
   (define valid-data
-    (hash "username" (make-binding "bogdan@example")
-          "password" (make-binding "hunter1234")))
+    (hash "username" "bogdan@example"
+          "password" "hunter1234"))
 
   (test-case "simple forms validate their inputs"
     (check-equal?
@@ -275,8 +275,8 @@
             (password . "This field is required."))))
 
     (check-equal?
-     (form-validate login-form (hash "username" (make-binding "bogdan")
-                                     "password" (make-binding "hunter2")))
+     (form-validate login-form (hash "username" "bogdan"
+                                     "password" "hunter2"))
      (err '((username . "This field must match the regular expression #rx\".+@.+\".")
             (password . "This field must contain 9 or more characters."))))
 
