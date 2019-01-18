@@ -1,6 +1,6 @@
 #lang racket
 
-(require forms
+(require forms/base
          racket/match
          web-server/http
          web-server/dispatch)

@@ -8,12 +8,6 @@
 
 (provide forms-tests)
 
-(define (ok v)
-  (cons 'ok v))
-
-(define (err v)
-  (cons 'err v))
-
 (define (make-binding s)
   (binding:form #"" (string->bytes/utf-8 s)))
 

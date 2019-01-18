@@ -5,8 +5,6 @@
     (require m ...)
     (provide (all-from-out m ...))))
 
-(provide-all-from "contracts.rkt"
-                  "formlets.rkt"
+(provide-all-from "formlets.rkt"
                   "forms.rkt"
-                  "prim.rkt"
                   "widgets.rkt")
