@@ -1,17 +1,24 @@
 #lang racket/base
 
-(require racket/contract
+(require racket/contract/base
          racket/string
          web-server/http
          "contracts.rkt"
          "forms.rkt")
 
-(provide widget-namespace
-         widget-errors
-         widget-input
-         widget-email
-         widget-text
-         widget-password)
+(provide
+ (contract-out
+  [widget-namespace (-> string? widget-renderer/c widget-renderer/c)]
+  [widget-errors (->* () (#:class string?) widget/c)]
+  [widget-input (->* () (#:type string?
+                         #:omit-value? boolean?
+                         #:attributes attributes/c) widget/c)]
+  [widget-email (->* () (#:attributes attributes/c) widget/c)]
+  [widget-text (->* () (#:attributes attributes/c) widget/c)]
+  [widget-password (->* () (#:attributes attributes/c) widget/c)]))
+
+(define attributes/c
+  (listof (list/c symbol? string?)))
 
 (define (lookup-errors errors full-name)
   (let loop ([path (map string->symbol (string-split full-name "."))]
@@ -28,13 +35,10 @@
 
       [else #f])))
 
-(define/contract ((widget-namespace namespace widget-renderer) name widget)
-  (-> string? widget-renderer/c widget-renderer/c)
+(define ((widget-namespace namespace widget-renderer) name widget)
   (widget-renderer (string-append namespace "." name) widget))
 
-(define/contract ((widget-errors #:class [class "errors"]) name value errors)
-  (->* () (#:class string?) widget/c)
-
+(define ((widget-errors #:class [class "errors"]) name value errors)
   (define error-or-errors (lookup-errors errors name))
   (define (render error-messages)
     `((ul ((class ,class))
@@ -50,20 +54,9 @@
 
     [else null]))
 
-(define/contract ((widget-input #:type [type "text"]
-                                #:class [class #f]
-                                #:omit-value? [omit-value? #f]
-                                #:required? [required? #f]
-                                #:disabled? [disabled? #f]
-                                #:min-length [min-length #f]
-                                #:max-length [max-length #f]) name binding _)
-  (->* () (#:type string?
-           #:class (or/c false/c string?)
-           #:omit-value? boolean?
-           #:required? boolean?
-           #:disabled? boolean?
-           #:min-length (or/c false/c exact-positive-integer?)
-           #:max-length (or/c false/c exact-positive-integer?)) widget/c)
+(define ((widget-input #:type [type "text"]
+                       #:omit-value? [omit-value? #f]
+                       #:attributes [attributes null]) name binding _)
 
   (define (optional attribute value)
     (cond
@@ -75,60 +68,16 @@
 
   `(input ((type ,type)
            (name ,name)
-           ,@(optional 'class class)
-           ,@(optional 'required (and required? "required"))
-           ,@(optional 'disabled (and disabled? "disabled"))
-           ,@(optional 'minlength min-length)
-           ,@(optional 'maxlength max-length)
+           ,@attributes
            ,@(optional 'value value))))
 
-(define/contract (widget-email #:class [class #f]
-                               #:required? [required? #f]
-                               #:disabled? [disabled? #f]
-                               #:min-length [min-length #f]
-                               #:max-length [max-length #f])
-  (->* () (#:class (or/c false/c string?)
-           #:required? boolean?
-           #:disabled? boolean?
-           #:min-length (or/c false/c exact-positive-integer?)
-           #:max-length (or/c false/c exact-positive-integer?)) widget/c)
+(define (widget-text #:attributes [attributes null])
+  (widget-input #:attributes attributes))
 
-  (widget-input #:type "email"
-                #:required? required?
-                #:disabled? disabled?
-                #:min-length min-length
-                #:max-length max-length))
+(define (widget-email #:attributes [attributes null])
+  (widget-input #:type "email" #:attributes attributes))
 
-(define/contract (widget-text #:class [class #f]
-                              #:required? [required? #f]
-                              #:disabled? [disabled? #f]
-                              #:min-length [min-length #f]
-                              #:max-length [max-length #f])
-  (->* () (#:class (or/c false/c string?)
-           #:required? boolean?
-           #:disabled? boolean?
-           #:min-length (or/c false/c exact-positive-integer?)
-           #:max-length (or/c false/c exact-positive-integer?)) widget/c)
-
-  (widget-input #:required? required?
-                #:disabled? disabled?
-                #:min-length min-length
-                #:max-length max-length))
-
-(define/contract (widget-password #:class [class #f]
-                                  #:required? [required? #f]
-                                  #:disabled? [disabled? #f]
-                                  #:min-length [min-length #f]
-                                  #:max-length [max-length #f])
-  (->* () (#:class (or/c false/c string?)
-           #:required? boolean?
-           #:disabled? boolean?
-           #:min-length (or/c false/c exact-positive-integer?)
-           #:max-length (or/c false/c exact-positive-integer?)) widget/c)
-
+(define (widget-password #:attributes [attributes null])
   (widget-input #:type "password"
                 #:omit-value? #t
-                #:required? required?
-                #:disabled? disabled?
-                #:min-length min-length
-                #:max-length max-length))
+                #:attributes attributes))
