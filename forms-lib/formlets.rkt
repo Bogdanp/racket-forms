@@ -19,6 +19,7 @@
   [to-symbol formlet/c]
 
   [binding/text formlet/c]
+  [binding/file formlet/c]
   [field/text formlet/c]
   [text formlet/c]
   [email formlet/c]))
@@ -77,7 +78,13 @@
   (lift (lambda (v)
           (if (binding:form? v)
               (ok (bytes->string/utf-8 (binding:form-value v)))
-              (err "Expected a binding:form field.")))))
+              (err "Expected a form field.")))))
+
+(define binding/file
+  (lift (lambda (v)
+          (if (binding:file? v)
+              (ok v)
+              (err "Expected a file.")))))
 
 (define field/text
   (lift (lambda (v)

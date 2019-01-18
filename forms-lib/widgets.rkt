@@ -14,6 +14,7 @@
                          #:omit-value? boolean?
                          #:attributes attributes/c) widget/c)]
   [widget-email (->* () (#:attributes attributes/c) widget/c)]
+  [widget-file (->* () (#:attributes attributes/c) widget/c)]
   [widget-text (->* () (#:attributes attributes/c) widget/c)]
   [widget-password (->* () (#:attributes attributes/c) widget/c)]))
 
@@ -81,3 +82,7 @@
   (widget-input #:type "password"
                 #:omit-value? #t
                 #:attributes attributes))
+
+(define (widget-file #:attributes [attributes null])
+  (widget-input #:type "file"
+                #:omit-value? #t))
