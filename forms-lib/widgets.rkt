@@ -13,8 +13,11 @@
   [widget-input (->* () (#:type string?
                          #:omit-value? boolean?
                          #:attributes attributes/c) widget/c)]
+  [widget-textarea (->* () (#:omit-value? boolean?
+                            #:attributes attributes/c) widget/c)]
   [widget-email (->* () (#:attributes attributes/c) widget/c)]
   [widget-file (->* () (#:attributes attributes/c) widget/c)]
+  [widget-hidden (->* () (#:attributes attributes/c) widget/c)]
   [widget-text (->* () (#:attributes attributes/c) widget/c)]
   [widget-password (->* () (#:attributes attributes/c) widget/c)]))
 
@@ -55,34 +58,46 @@
 
     [else null]))
 
+(define (xexpr/optional attribute value)
+  (cond
+    [value (list (list attribute value))]
+    [else null]))
+
 (define ((widget-input #:type [type "text"]
                        #:omit-value? [omit-value? #f]
-                       #:attributes [attributes null]) name binding _)
+                       #:attributes [attributes null]) name binding errors)
 
-  (define (optional attribute value)
-    (cond
-      [value (list (list attribute value))]
-      [else null]))
-
-  (define value
-    (and (not omit-value?) binding (bytes->string/utf-8 (binding:form-value binding))))
+  (define value (and (not omit-value?) binding (bytes->string/utf-8 (binding:form-value binding))))
 
   `(input ((type ,type)
            (name ,name)
            ,@attributes
-           ,@(optional 'value value))))
+           ,@(xexpr/optional 'value value))))
+
+(define ((widget-textarea #:omit-value? [omit-value? #f]
+                          #:attributes [attributes null]) name binding errors)
+
+  (define value (and (not omit-value?) binding (bytes->string/utf-8 (binding:form-value binding))))
+
+  `(textarea ((name ,name) ,@attributes) ,@(xexpr/optional 'value value)))
+
+(define (widget-email #:attributes [attributes null])
+  (widget-input #:type "email"
+                #:attributes attributes))
+
+(define (widget-file #:attributes [attributes null])
+  (widget-input #:type "file"
+                #:omit-value? #t
+                #:attributes attributes))
+
+(define (widget-hidden #:attributes [attributes null])
+  (widget-input #:type "hidden"
+                #:attributes attributes))
 
 (define (widget-text #:attributes [attributes null])
   (widget-input #:attributes attributes))
-
-(define (widget-email #:attributes [attributes null])
-  (widget-input #:type "email" #:attributes attributes))
 
 (define (widget-password #:attributes [attributes null])
   (widget-input #:type "password"
                 #:omit-value? #t
                 #:attributes attributes))
-
-(define (widget-file #:attributes [attributes null])
-  (widget-input #:type "file"
-                #:omit-value? #t))
