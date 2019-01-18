@@ -36,14 +36,7 @@
       (check-equal? ((ensure text to-boolean) #f) (ok #f))
       (check-equal? ((ensure text to-boolean) "whatever") (ok #t))
       (check-equal? ((ensure text to-symbol) #f) (ok #f))
-      (check-equal? ((ensure text to-symbol) "a-b-c") (ok 'a-b-c))))
-
-   (test-suite
-    "default"
-
-    (test-case "can assign default values"
-      (check-equal? ((ensure text (default "a")) #f) (ok "a"))
-      (check-equal? ((ensure text (default "a")) "b") (ok "b"))))))
+      (check-equal? ((ensure text to-symbol) "a-b-c") (ok 'a-b-c))))))
 
 (module+ test
   (require rackunit/text-ui)

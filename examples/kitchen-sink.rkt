@@ -10,8 +10,14 @@
           [a-password (ensure text (required) (longer-than 8))]
           [a-file (ensure binding/file (required))]
           [a-textarea text]
-          [a-hidden (ensure text (default "hidden"))])
-   (list an-email a-password a-file a-textarea a-hidden)))
+          [a-hidden text]
+          [a-checkbox (ensure text to-boolean)])
+    (hash 'email an-email
+          'password a-password
+          'file a-file
+          'textarea a-textarea
+          'hidden a-hidden
+          'checkbox a-checkbox)))
 
 (define (render-form render-widget)
   `(form ((action "/")
@@ -32,10 +38,13 @@
          ,(render-widget "a-hidden" (widget-hidden))
          ,@(render-widget "a-hidden" (widget-errors))
          (br)
+         (label "Checkbox" ,(render-widget "a-checkbox" (widget-checkbox)))
+         ,@(render-widget "a-checkbox" (widget-errors))
+         (br)
          (button ((type "submit")) "Sign up!")))
 
 (define (home req)
-  (match (form-run a-form req)
+  (match (form-run a-form req #:defaults (hash "a-hidden" "hidden-value"))
     [(list 'passed data _)
      (response/xexpr `(div
                        (h1 "Data")

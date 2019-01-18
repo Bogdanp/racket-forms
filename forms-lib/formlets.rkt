@@ -9,7 +9,6 @@
  (contract-out
   [ensure (->* (formlet/c) #:rest (listof formlet/c) formlet/c)]
 
-  [default (-> any/c formlet/c)]
   [required (->* () (#:message string?) formlet/c)]
   [matches (->* (regexp?) (#:message string?) formlet/c)]
   [shorter-than (->* (exact-positive-integer?) (#:message string?) formlet/c)]
@@ -32,11 +31,6 @@
 (define ((lift f) v)
   (if v
       (f v)
-      (ok v)))
-
-(define ((default x) v)
-  (if (not v)
-      (ok x)
       (ok v)))
 
 (define ((required #:message [message "This field is required."]) v)

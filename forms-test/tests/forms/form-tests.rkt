@@ -107,7 +107,7 @@
 
     (test-case "can process pending inputs"
       (check-match
-       (form-process login-form (hash) #f)
+       (form-process login-form (hash) #:submitted? #f)
        (list 'pending _ procedure?)))
 
     (test-case "can process good inputs"
@@ -154,7 +154,7 @@
     "simple"
 
     (test-case "can render pending forms"
-      (match (form-process login-form (hash) #f)
+      (match (form-process login-form (hash) #:submitted? #f)
         [(list 'pending _ render-widget)
          (check-equal?
           (render-login-form render-widget)
@@ -190,7 +190,7 @@
     "complex"
 
     (test-case "can render pending forms"
-      (match (form-process release-form (hash) #f)
+      (match (form-process release-form (hash) #:submitted? #f)
         [(list 'pending _ render-widget)
          (check-equal?
           (render-release-form render-widget)
@@ -206,9 +206,32 @@
                   (div
                    (label "Name" (input ((type "text") (name "package.name"))))
                    (label "Version" (input ((type "text") (name "package.version"))))))
-                 (button ((type "submit")) "Save")))])))))
+                 (button ((type "submit")) "Save")))]))
+
+    (test-case "can render fields' default values"
+      (match (form-process (form* [(x text)] x)
+                           (hash)
+                           #:defaults (hash "x" "default")
+                           #:submitted? #f)
+        [(list 'pending _ render-widget)
+         (check-equal?
+          (render-widget "x" (widget-hidden))
+          '(input ((type "hidden") (name "x") (value "default"))))
+
+         (check-equal?
+          (render-widget "x" (widget-checkbox))
+          '(input ((type "checkbox") (name "x") (value "default") (checked "checked"))))]))
+
+    (test-case "raises a user error when attempting to render unknown fields"
+      (match (form-process (form* [(x text)] x) (hash) #:submitted? #f)
+        [(list 'pending _ render-widget)
+         (check-exn exn:fail:user? (lambda ()
+                                     (render-widget "y" (widget-text))))])))))
 
 (module+ test
   (require rackunit/text-ui)
-  (run-tests form-tests)
-  (run-tests widget-tests))
+  (run-tests (test-suite
+              "form"
+
+              form-tests
+              widget-tests)))

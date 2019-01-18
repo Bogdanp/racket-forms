@@ -13,13 +13,14 @@
   [widget-input (->* () (#:type string?
                          #:omit-value? boolean?
                          #:attributes attributes/c) widget/c)]
-  [widget-textarea (->* () (#:omit-value? boolean?
-                            #:attributes attributes/c) widget/c)]
+  [widget-checkbox (->* () (#:attributes attributes/c) widget/c)]
   [widget-email (->* () (#:attributes attributes/c) widget/c)]
   [widget-file (->* () (#:attributes attributes/c) widget/c)]
   [widget-hidden (->* () (#:attributes attributes/c) widget/c)]
+  [widget-password (->* () (#:attributes attributes/c) widget/c)]
   [widget-text (->* () (#:attributes attributes/c) widget/c)]
-  [widget-password (->* () (#:attributes attributes/c) widget/c)]))
+  [widget-textarea (->* () (#:omit-value? boolean?
+                            #:attributes attributes/c) widget/c)]))
 
 (define attributes/c
   (listof (list/c symbol? string?)))
@@ -74,13 +75,15 @@
            ,@attributes
            ,@(xexpr/optional 'value value))))
 
-(define ((widget-textarea #:omit-value? [omit-value? #f]
-                          #:attributes [attributes null]) name binding errors)
+(define ((widget-checkbox #:attributes [attributes null]) name binding errors)
+  (define value (and binding (bytes->string/utf-8 (binding:form-value binding))))
+  (define checked (and value "checked"))
 
-  (define value (and (not omit-value?) binding (bytes->string/utf-8 (binding:form-value binding))))
-
-  `(textarea ((name ,name) ,@attributes)
-             ,@(or (and value (list value)) null)))
+  `(input ((type "checkbox")
+           (name ,name)
+           ,@attributes
+           ,@(xexpr/optional 'value value)
+           ,@(xexpr/optional 'checked checked))))
 
 (define (widget-email #:attributes [attributes null])
   (widget-input #:type "email"
@@ -95,10 +98,18 @@
   (widget-input #:type "hidden"
                 #:attributes attributes))
 
-(define (widget-text #:attributes [attributes null])
-  (widget-input #:attributes attributes))
-
 (define (widget-password #:attributes [attributes null])
   (widget-input #:type "password"
                 #:omit-value? #t
                 #:attributes attributes))
+
+(define (widget-text #:attributes [attributes null])
+  (widget-input #:attributes attributes))
+
+(define ((widget-textarea #:omit-value? [omit-value? #f]
+                          #:attributes [attributes null]) name binding errors)
+
+  (define value (and (not omit-value?) binding (bytes->string/utf-8 (binding:form-value binding))))
+  (define value/xexpr (or (and value (list value)) null))
+
+  `(textarea ((name ,name) ,@attributes) ,@value/xexpr))
