@@ -79,7 +79,8 @@
 
   (define value (and (not omit-value?) binding (bytes->string/utf-8 (binding:form-value binding))))
 
-  `(textarea ((name ,name) ,@attributes) ,@(xexpr/optional 'value value)))
+  `(textarea ((name ,name) ,@attributes)
+             ,@(or (and value (list value)) null)))
 
 (define (widget-email #:attributes [attributes null])
   (widget-input #:type "email"
