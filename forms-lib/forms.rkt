@@ -28,36 +28,39 @@
      #'(form (lambda (name ...) e ...)
              (list (cons 'name f) ...))]))
 
-(define/contract (form-validate form bindings [prefix null])
-  (->* (form? bindings/c) ((listof string?)) res/c)
+(define/contract (form-validate form bindings)
+  (-> form? bindings/c res/c)
 
-  (for/fold ([results null]
-             [errors null]
-             #:result (if (null? errors)
-                          (ok (apply (form-constructor form) (reverse results)))
-                          (err (reverse errors))))
-            ([child (form-children form)])
+  (define (validate form bindings namespace)
+    (for/fold ([results null]
+               [errors null]
+               #:result (if (null? errors)
+                            (ok (apply (form-constructor form) (reverse results)))
+                            (err (reverse errors))))
+              ([child (form-children form)])
 
-    (define name (car child))
-    (define formlet (cdr child))
+      (define name (car child))
+      (define formlet (cdr child))
 
-    (cond
-      [(form? formlet)
-       (define res (form-validate formlet bindings (cons name prefix)))
-       (cond
-         [(ok? res)
-          (values (cons (cdr res) results) errors)]
+      (cond
+        [(form? formlet)
+         (define res (validate formlet bindings (string-append namespace (symbol->string name) ".")))
+         (cond
+           [(ok? res)
+            (values (cons (cdr res) results) errors)]
 
-         [else
-          (values results (cons (cons name (cdr res)) errors))])]
+           [else
+            (values results (cons (cons name (cdr res)) errors))])]
 
-      [else
-       (define full-name (string-join (map symbol->string (reverse (cons name prefix))) "."))
-       (define binding (hash-ref bindings full-name #f))
-       (define res (formlet binding))
-       (cond
-         [(ok? res) (values (cons (cdr res) results) errors)]
-         [else (values results (cons (cons name (cdr res)) errors))])])))
+        [else
+         (define full-name (string-append namespace (symbol->string name)))
+         (define binding (hash-ref bindings full-name #f))
+         (define res (formlet binding))
+         (cond
+           [(ok? res) (values (cons (cdr res) results) errors)]
+           [else (values results (cons (cons name (cdr res)) errors))])])))
+
+  (validate form bindings ""))
 
 (define/contract (form-process form bindings [submitted? #t])
   (->* (form? bindings/c) (boolean?) validation/c)
