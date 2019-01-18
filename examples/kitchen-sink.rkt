@@ -23,7 +23,7 @@
          (label "Password" ,(render-widget "a-password" (widget-password)))
          ,@(render-widget "a-password" (widget-errors))
          (br)
-         (label "File" ,(render-widget "an-file" (widget-file)))
+         (label "File" ,(render-widget "a-file" (widget-file)))
          ,@(render-widget "a-file" (widget-errors))
          (br)
          (label "Textarea" ,(render-widget "a-textarea" (widget-textarea)))
@@ -37,7 +37,9 @@
 (define (home req)
   (match (form-run a-form req)
     [(list 'passed data _)
-     (response/xexpr '(h1 "Signed up!"))]
+     (response/xexpr `(div
+                       (h1 "Data")
+                       (pre ,(with-output-to-string (lambda () (write data))))))]
 
     [(list _ _ render-widget)
      (response/xexpr (render-form render-widget))]))
