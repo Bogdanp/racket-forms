@@ -3,7 +3,16 @@
 (require rackunit
          rackunit/text-ui)
 
-(require "forms-tests.rkt")
+(require "formlet-tests.rkt"
+         "form-tests.rkt")
+
+(define all-tests
+  (test-suite
+   "forms-lib"
+
+   formlet-tests
+   form-tests
+   widget-tests))
 
 (module+ main
-  (run-tests forms-tests))
+  (run-tests all-tests))
