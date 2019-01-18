@@ -74,8 +74,8 @@
     [else
      (list 'pending #f (make-widget-renderer null))]))
 
-(define (form-run form request #:submit-method [submit-method #"POST"])
-  (define submitted? (equal? (request-method request) submit-method))
+(define (form-run form request #:submit-methods [submit-methods '(#"DELETE" #"PATCH" #"POST" #"PUT")])
+  (define submitted? (member (request-method request) submit-methods))
   (define bindings
     (for/fold ([bindings (hash)])
               ([binding (request-bindings/raw request)])
