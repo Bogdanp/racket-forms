@@ -137,6 +137,9 @@
    '(h1 "Not Found")
    '(p "The page you are looking for does not exist.")))
 
+(define (redirect/forget uri)
+  (send/forward (lambda _ (redirect-to uri))))
+
 (define (home req)
   (define all-articles (map render-article (unbox articles)))
   (render-template
@@ -148,7 +151,7 @@
      (match (form-run article-form req)
        [(list 'passed article _)
         (article-add! article)
-        (redirect/get/forget #:headers (list (make-header #"Location" (string->bytes/utf-8 (reverse-uri view-article (article-slug article))))))]
+        (redirect/forget (reverse-uri view-article (article-slug article)))]
 
        [(list _ _ render-widget)
         (render-template
@@ -176,7 +179,7 @@
         (match (form-run article-form req #:defaults defaults)
           [(list 'passed article _)
            (article-replace! slug article)
-           (redirect-to (reverse-uri view-article (article-slug article)))]
+           (redirect/forget (reverse-uri edit-article (article-slug article)))]
 
           [(list _ _ render-widget)
            (render-template
