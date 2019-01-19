@@ -22,21 +22,34 @@
       (check-equal? (text (make-binding "a")) (ok "a"))))
 
    (test-suite
+    "required"
+
+    (test-case "can error given #f"
+      (check-equal? ((ensure text (required)) #f) (err "This field is required.")))
+
+    (test-case "can error given an empty string"
+      (check-equal? ((ensure text (required)) "") (err "This field is required."))))
+
+   (test-suite
+    "one-of"
+
+    (test-case "can limit the set of inputs"
+      (check-equal?
+       ((ensure text (one-of '(("a" . a)
+                               ("b" . b)))) "c")
+       (err "This field must contain one of the following values: a, b")))
+
+    (test-case "can map value tags to concrete values"
+      (check-equal?
+       ((ensure text (one-of '(("a" . concrete)))) "a") (ok 'concrete))))
+
+   (test-suite
     "ensure"
 
     (test-case "can compose formlets"
-      (check-equal? ((ensure text (required)) #f) (err "This field is required."))
-      (check-equal? ((ensure text (required)) "a") (ok "a"))
       (check-equal? ((ensure text (required) (longer-than 3)) #f) (err "This field is required."))
       (check-equal? ((ensure text (required) (longer-than 3)) "a") (err "This field must contain 4 or more characters."))
-      (check-equal? ((ensure text (required) (longer-than 3)) "abcd") (ok "abcd"))
-      (check-equal? ((ensure text (to-number)) #f) (ok #f))
-      (check-equal? ((ensure text (to-number)) "a") (err "This field must contain a number."))
-      (check-equal? ((ensure text (to-number)) "10.5") (ok 10.5))
-      (check-equal? ((ensure text to-boolean) #f) (ok #f))
-      (check-equal? ((ensure text to-boolean) "whatever") (ok #t))
-      (check-equal? ((ensure text to-symbol) #f) (ok #f))
-      (check-equal? ((ensure text to-symbol) "a-b-c") (ok 'a-b-c))))))
+      (check-equal? ((ensure text (required) (longer-than 3)) "abcd") (ok "abcd"))))))
 
 (module+ test
   (require rackunit/text-ui)

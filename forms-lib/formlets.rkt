@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require racket/contract/base
+         racket/string
          web-server/http
          "contracts.rkt"
          "unsafe/prim.rkt")
@@ -11,6 +12,7 @@
 
   [required (->* () (#:message string?) formlet/c)]
   [matches (->* (regexp?) (#:message string?) formlet/c)]
+  [one-of (->* ((listof (cons/c string? any/c))) (#:message string?) formlet/c)]
   [shorter-than (->* (exact-positive-integer?) (#:message string?) formlet/c)]
   [longer-than (->* (exact-positive-integer?) (#:message string?) formlet/c)]
   [to-boolean formlet/c]
@@ -34,13 +36,22 @@
       (ok v)))
 
 (define ((required #:message [message "This field is required."]) v)
-  (or (and v (ok v))
+  (or (and v (not (string=? "" v)) (ok v))
       (err message)))
 
 (define (matches p #:message [message (format "This field must match the regular expression ~v." p)])
   (lift (lambda (v)
           (if (regexp-match? p v)
               (ok v)
+              (err message)))))
+
+(define (one-of pairs #:message [message (format "This field must contain one of the following values: ~a" (string-join (map car pairs) ", "))])
+  (lift (lambda (v)
+          (define pair
+            (findf (lambda (pair)
+                     (string=? v (car pair))) pairs))
+          (if pair
+              (ok (cdr pair))
               (err message)))))
 
 (define (shorter-than n #:message [message (format "This field must contain ~a or fewer characters." (sub1 n))])

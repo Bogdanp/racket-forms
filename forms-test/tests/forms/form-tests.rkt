@@ -226,7 +226,47 @@
       (match (form-process (form* [(x text)] x) (hash) #:submitted? #f)
         [(list 'pending _ render-widget)
          (check-exn exn:fail:user? (lambda ()
-                                     (render-widget "y" (widget-text))))])))))
+                                     (render-widget "y" (widget-text))))])))
+
+   (test-suite
+    "widget-select"
+
+    (test-case "can render simple option lists"
+      (match (form-process (form* [(x text)] x) (hash) #:submitted? #f)
+        [(list 'pending _ render-widget)
+         (check-equal?
+          (render-widget "x" (widget-select '(("cat" . "Cat")
+                                              ("dog" . "Dog"))))
+          '(select
+            ((name "x"))
+            (option ((value "cat")) "Cat")
+            (option ((value "dog")) "Dog")))])
+
+      (match (form-process (form* [(x text)] x)
+                           (hash)
+                           #:defaults (hash "x" "cat")
+                           #:submitted? #f)
+        [(list 'pending _ render-widget)
+         (check-equal?
+          (render-widget "x" (widget-select '(("cat" . "Cat")
+                                              ("dog" . "Dog"))))
+          '(select
+            ((name "x"))
+            (option ((value "cat") (selected "selected")) "Cat")
+            (option ((value "dog")) "Dog")))]))
+
+    (test-case "can render option groups"
+      (match (form-process (form* [(x text)] x) (hash) #:submitted? #f)
+        [(list 'pending _ render-widget)
+         (check-equal?
+          (render-widget "x" (widget-select (hash "Animals" '(("cat" . "Cat")
+                                                              ("dog" . "Dog")))))
+          '(select
+            ((name "x"))
+            (optgroup
+             ((label "Animals"))
+             (option ((value "cat")) "Cat")
+             (option ((value "dog")) "Dog"))))])))))
 
 (module+ test
   (require rackunit/text-ui)

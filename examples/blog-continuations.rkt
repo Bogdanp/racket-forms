@@ -1,8 +1,8 @@
-#lang racket
+#lang racket/base
 
 (require forms/base
-         net/base64
          racket/function
+         racket/match
          racket/random
          web-server/dispatch
          web-server/http
@@ -23,17 +23,13 @@
 (define article-form
   (form* ([author author-form]
           [title (ensure text (required) (longer-than 1) (shorter-than 150))]
-          [content (ensure text (required) (longer-than 1))])
+          [content (ensure text (required) (longer-than 1))]
+          [agreement (ensure text to-boolean (required #:message "You must check this box."))])
     (article author title (slugify title) content)))
 
-(define articles (box (list (article (author "Bogdan Popa" "bogdan@defn.io")
-                                     "Part Two"
-                                     "part-two"
-                                     "Hi, it's me again!")
-                            (article (author "Bogdan Popa" "bogdan@defn.io")
-                                     "Hello World!"
-                                     "hello-world-"
-                                     "Hi there, world!"))))
+(define articles
+  (box (list (article (author "Bogdan Popa" "bogdan@defn.io") "Part Two" "part-two" "Hi, it's me again!")
+             (article (author "Bogdan Popa" "bogdan@defn.io") "Hello World!" "hello-world-" "Hi there, world!"))))
 
 (define (article-lookup slug)
   (for/first ([article (unbox articles)]
@@ -78,13 +74,14 @@
 (define (render-article-form target render-widget [action-label "Save"])
   (define author-form (render-author-form (widget-namespace "author" render-widget)))
   (define render-title-field (make-labeled-field "Title" "title" (widget-text)))
-  (define render-content-field (make-labeled-field "Content" "content" (widget-textarea #:attributes '((columns "140")
-                                                                                                       (rows "5")))))
+  (define render-content-field (make-labeled-field "Content" "content" (widget-textarea #:attributes '((columns "140") (rows "5")))))
+  (define render-checkbox-field (make-labeled-field "I solemnly swear that I am up to no good" "agreement" (widget-checkbox)))
   (define content-form `(fieldset
                          ((class "form__fieldset"))
                          (legend "Article")
                          ,(render-title-field render-widget)
-                         ,(render-content-field render-widget)))
+                         ,(render-content-field render-widget)
+                         ,(render-checkbox-field render-widget)))
 
   `(form
     ((action ,target)
@@ -137,9 +134,6 @@
    '(h1 "Not Found")
    '(p "The page you are looking for does not exist.")))
 
-(define (redirect/forget uri)
-  (send/forward (lambda _ (redirect-to uri))))
-
 (define (home req)
   (define all-articles (map render-article (unbox articles)))
   (render-template
@@ -151,7 +145,7 @@
      (match (form-run article-form req)
        [(list 'passed article _)
         (article-add! article)
-        (redirect/forget (reverse-uri view-article (article-slug article)))]
+        (redirect-to (reverse-uri view-article (article-slug article)))]
 
        [(list _ _ render-widget)
         (render-template
@@ -179,7 +173,7 @@
         (match (form-run article-form req #:defaults defaults)
           [(list 'passed article _)
            (article-replace! slug article)
-           (redirect/forget (reverse-uri edit-article (article-slug article)))]
+           (redirect-to (reverse-uri edit-article (article-slug article)))]
 
           [(list _ _ render-widget)
            (render-template

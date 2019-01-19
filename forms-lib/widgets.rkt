@@ -18,12 +18,16 @@
   [widget-file (->* () (#:attributes attributes/c) widget/c)]
   [widget-hidden (->* () (#:attributes attributes/c) widget/c)]
   [widget-password (->* () (#:attributes attributes/c) widget/c)]
+  [widget-select (->* ((or/c (hash/c string? options/c) options/c)) (#:attributes attributes/c) widget/c)]
   [widget-text (->* () (#:attributes attributes/c) widget/c)]
   [widget-textarea (->* () (#:omit-value? boolean?
                             #:attributes attributes/c) widget/c)]))
 
 (define attributes/c
   (listof (list/c symbol? string?)))
+
+(define options/c
+  (listof (cons/c string? string?)))
 
 (define (lookup-errors errors full-name)
   (let loop ([path (map string->symbol (string-split full-name "."))]
@@ -102,6 +106,29 @@
   (widget-input #:type "password"
                 #:omit-value? #t
                 #:attributes attributes))
+
+(define ((widget-select options #:attributes [attributes null]) name binding errors)
+  (define value (and binding (bytes->string/utf-8 (binding:form-value binding))))
+
+  (define (make-option option)
+    (define option-value (car option))
+    (define option-label (cdr option))
+    (define selected? (and value (string=? value option-value) "selected"))
+
+    `(option
+      ((value ,option-value)
+       ,@(xexpr/optional 'selected selected?)) ,option-label))
+
+  (define options-elements
+    (cond
+      [(hash? options)
+       (for/list ([(group-label options) options])
+         `(optgroup ((label ,group-label)) ,@(map make-option options)))]
+
+      [else
+       (map make-option options)]))
+
+  `(select ((name ,name) ,@attributes) ,@options-elements))
 
 (define (widget-text #:attributes [attributes null])
   (widget-input #:attributes attributes))
