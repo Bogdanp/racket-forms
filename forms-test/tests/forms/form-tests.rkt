@@ -229,6 +229,31 @@
                                      (render-widget "y" (widget-text))))])))
 
    (test-suite
+    "widget-radio-group"
+
+    (test-case "can render simple option lists"
+      (match (form-process (form* [(x text)] x) (hash) #:submitted? #f)
+        [(list 'pending _ render-widget)
+         (check-equal?
+          (render-widget "x" (widget-radio-group '(("cat" . "Cat")
+                                                   ("dog" . "Dog"))))
+          '(div
+            (label (input ((type "radio") (name "x") (value "cat"))) "Cat")
+            (label (input ((type "radio") (name "x") (value "dog"))) "Dog")))])
+
+      (match (form-process (form* [(x text)] x)
+                           (hash)
+                           #:defaults (hash "x" "cat")
+                           #:submitted? #f)
+        [(list 'pending _ render-widget)
+         (check-equal?
+          (render-widget "x" (widget-radio-group '(("cat" . "Cat")
+                                                   ("dog" . "Dog"))))
+          '(div
+            (label (input ((type "radio") (name "x") (value "cat") (checked "checked"))) "Cat")
+            (label (input ((type "radio") (name "x") (value "dog"))) "Dog")))])))
+
+   (test-suite
     "widget-select"
 
     (test-case "can render simple option lists"

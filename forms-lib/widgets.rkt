@@ -18,6 +18,7 @@
   [widget-file (->* () (#:attributes attributes/c) widget/c)]
   [widget-hidden (->* () (#:attributes attributes/c) widget/c)]
   [widget-password (->* () (#:attributes attributes/c) widget/c)]
+  [widget-radio-group (->* (options/c) (#:attributes attributes/c) widget/c)]
   [widget-select (->* ((or/c (hash/c string? options/c) options/c)) (#:attributes attributes/c) widget/c)]
   [widget-text (->* () (#:attributes attributes/c) widget/c)]
   [widget-textarea (->* () (#:omit-value? boolean?
@@ -106,6 +107,25 @@
   (widget-input #:type "password"
                 #:omit-value? #t
                 #:attributes attributes))
+
+(define ((widget-radio-group options #:attributes [attributes null]) name binding errors)
+  (define value (and binding (bytes->string/utf-8 (binding:form-value binding))))
+
+  (define (make-radio option)
+    (define radio-value (car option))
+    (define radio-label (cdr option))
+    (define checked (and value (string=? value radio-value) "checked"))
+
+    `(label
+      (input
+       ((type "radio")
+        (name ,name)
+        ,@attributes
+        ,@(xexpr/optional 'value radio-value)
+        ,@(xexpr/optional 'checked checked)))
+      ,radio-label))
+
+  `(div ,@(map make-radio options)))
 
 (define ((widget-select options #:attributes [attributes null]) name binding errors)
   (define value (and binding (bytes->string/utf-8 (binding:form-value binding))))
