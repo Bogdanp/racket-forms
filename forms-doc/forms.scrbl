@@ -38,10 +38,12 @@ another value.
 A basic form might look like this:
 
 @(define eval
-   (parameterize ([sandbox-output 'string]
-                  [sandbox-error-output 'string]
-                  [sandbox-memory-limit 50])
-     (make-evaluator 'racket/base)))
+   (call-with-trusted-sandbox-configuration
+     (lambda ()
+        (parameterize ([sandbox-output 'string]
+                       [sandbox-error-output 'string]
+                       [sandbox-memory-limit 50])
+          (make-evaluator 'racket/base)))))
 
 @examples[
   #:eval eval
