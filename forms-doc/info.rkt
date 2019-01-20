@@ -7,6 +7,9 @@
 
 (define deps '("base"))
 (define build-deps '("forms-lib"
+                     "sandbox-lib"
                      "scribble-lib"
-                     "racket-doc"))
+                     "racket-doc"
+                     "web-server-doc"
+                     "web-server-lib"))
 (define update-implies '("forms-lib"))
