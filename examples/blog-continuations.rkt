@@ -14,17 +14,17 @@
 (struct author (name email))
 
 (define author-form
-  (form* ([name (ensure text (required) (longer-than 3) (shorter-than 50))]
-          [email (ensure email (required))])
+  (form* ([name (ensure binding/text (required) (longer-than 3) (shorter-than 50))]
+          [email (ensure binding/email (required))])
     (author name email)))
 
 (struct article (author title slug content))
 
 (define article-form
   (form* ([author author-form]
-          [title (ensure text (required) (longer-than 1) (shorter-than 150))]
-          [content (ensure text (required) (longer-than 1))]
-          [agreement (ensure text to-boolean (required #:message "You must check this box."))])
+          [title (ensure binding/text (required) (longer-than 1) (shorter-than 150))]
+          [content (ensure binding/text (required) (longer-than 1))]
+          [agreement (ensure binding/text (required #:message "You must check this box."))])
     (article author title (slugify title) content)))
 
 (define articles

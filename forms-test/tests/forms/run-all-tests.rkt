@@ -4,7 +4,8 @@
          rackunit/text-ui)
 
 (require "formlet-tests.rkt"
-         "form-tests.rkt")
+         "form-tests.rkt"
+         "widget-tests.rkt")
 
 (define all-tests
   (test-suite

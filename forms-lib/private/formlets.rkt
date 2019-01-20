@@ -19,11 +19,12 @@
   [to-number (->* () (#:message string?) formlet/c)]
   [to-symbol formlet/c]
 
-  [binding/text formlet/c]
   [binding/file formlet/c]
-  [field/text formlet/c]
-  [text formlet/c]
-  [email formlet/c]))
+  [binding/text formlet/c]
+  [binding/boolean formlet/c]
+  [binding/email formlet/c]
+  [binding/number formlet/c]
+  [binding/symbol formlet/c]))
 
 (define (ensure f . gs)
   (for/fold ([f f])
@@ -79,26 +80,26 @@
 (define (to-symbol v)
   (ok (and v (string->symbol v))))
 
-(define binding/text
-  (lift (lambda (v)
-          (if (binding:form? v)
-              (ok (bytes->string/utf-8 (binding:form-value v)))
-              (err "Expected a form field.")))))
-
 (define binding/file
   (lift (lambda (v)
           (if (binding:file? v)
               (ok v)
-              (err "Expected a file.")))))
+              (err "Expected a binding:file.")))))
 
-(define field/text
+(define binding/text
   (lift (lambda (v)
-          (if (string? v)
-              (ok v)
-              (err "Expected a text field.")))))
+          (if (binding:form? v)
+              (ok (bytes->string/utf-8 (binding:form-value v)))
+              (err "Expected a binding:text.")))))
 
-(define text
-  (alternate binding/text field/text))
+(define binding/boolean
+  (ensure binding/text to-boolean))
 
-(define email
-  (ensure text (matches #rx".+@.+")))
+(define binding/email
+  (ensure binding/text (matches #rx".+@.+" #:message "This field must contain an e-mail address.")))
+
+(define binding/number
+  (ensure binding/text (to-number)))
+
+(define binding/symbol
+  (ensure binding/text to-symbol))

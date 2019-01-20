@@ -14,26 +14,21 @@
 (struct author (name email))
 
 (define author-form
-  (form* ([name (ensure text (required) (longer-than 3) (shorter-than 50))]
-          [email (ensure email (required))])
+  (form* ([name (ensure binding/text (required) (longer-than 3) (shorter-than 50))]
+          [email (ensure binding/email (required))])
     (author name email)))
 
 (struct article (author title slug content))
 
 (define article-form
   (form* ([author author-form]
-          [title (ensure text (required) (longer-than 1) (shorter-than 150))]
-          [content (ensure text (required) (longer-than 1))])
+          [title (ensure binding/text (required) (longer-than 1) (shorter-than 150))]
+          [content (ensure binding/text (required) (longer-than 1))])
     (article author title (slugify title) content)))
 
-(define articles (box (list (article (author "Bogdan Popa" "bogdan@defn.io")
-                                     "Part Two"
-                                     "part-two"
-                                     "Hi, it's me again!")
-                            (article (author "Bogdan Popa" "bogdan@defn.io")
-                                     "Hello World!"
-                                     "hello-world-"
-                                     "Hi there, world!"))))
+(define articles
+  (box (list (article (author "Bogdan Popa" "bogdan@defn.io") "Part Two" "part-two" "Hi, it's me again!")
+             (article (author "Bogdan Popa" "bogdan@defn.io") "Hello World!" "hello-world-" "Hi there, world!"))))
 
 (define (article-lookup slug)
   (for/first ([article (unbox articles)]

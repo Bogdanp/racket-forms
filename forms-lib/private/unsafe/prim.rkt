@@ -14,12 +14,6 @@
 (define (err? res)
   (and (pair? res) (eq? 'err (car res))))
 
-(define ((alternate fa fb) v)
-  (define res (fa v))
-  (cond
-    [(ok? res) res]
-    [else (fb v)]))
-
 (define ((bind fa fb) v)
   (define res (fa v))
   (cond

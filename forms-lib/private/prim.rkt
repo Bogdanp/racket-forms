@@ -10,5 +10,4 @@
   [ok? (-> any/c boolean?)]
   [err (-> any/c res/c)]
   [err? (-> any/c boolean?)]
-  [alternate (-> formlet/c formlet/c formlet/c)]
   [bind (-> formlet/c formlet/c formlet/c)]))

@@ -4,20 +4,16 @@
          racket/match
          racket/string
          rackunit
-         web-server/http)
+         "util.rkt")
 
-(provide form-tests
-         widget-tests)
-
-(define (make-binding s)
-  (binding:form #"" (string->bytes/utf-8 s)))
+(provide form-tests)
 
 (struct login-data (username password)
   #:transparent)
 
 (define login-form
-  (form* ([username (ensure text (required) (matches #rx".+@.+"))]
-          [password (ensure text (required) (longer-than 8))])
+  (form* ([username (ensure binding/email (required))]
+          [password (ensure binding/text (required) (longer-than 8))])
     (login-data username password)))
 
 (define (render-login-form render-widget)
@@ -29,16 +25,16 @@
          ,@(render-widget "password" (widget-errors))))
 
 (define valid-login-data
-  (hash "username" "bogdan@example"
-        "password" "hunter1234"))
+  (hash "username" (make-binding "bogdan@example")
+        "password" (make-binding "hunter1234")))
 
 (struct author (name email) #:transparent)
 (struct package (name version) #:transparent)
 (struct release (author package) #:transparent)
 
 (define author-form
-  (form* ([name (ensure text (required))]
-          [email (ensure email (required))])
+  (form* ([name (ensure binding/text (required))]
+          [email (ensure binding/email (required))])
     (author name email)))
 
 (define (render-author-form render-widget)
@@ -54,8 +50,8 @@
       (ok version)))
 
 (define package-form
-  (form* ([name (ensure text (required))]
-          [version (ensure text (required) parse-version)])
+  (form* ([name (ensure binding/text (required))]
+          [version (ensure binding/text (required) parse-version)])
     (package name version)))
 
 (define (render-package-form render-widget)
@@ -80,6 +76,12 @@
           ,(render-package-form (widget-namespace "package" render-widget)))
          (button ((type "submit")) "Save")))
 
+(define valid-release-data
+  (hash "author.name" (make-binding "Bogdan Popa")
+        "author.email" (make-binding "bogdan@defn.io")
+        "package.name" (make-binding "forms")
+        "package.version" (make-binding "1.5.3")))
+
 (define form-tests
   (test-suite
    "form"
@@ -95,9 +97,9 @@
 
     (test-case "can validate bad inputs"
       (check-equal?
-       (form-validate login-form (hash "username" "bogdan"
-                                       "password" "hunter2"))
-       (err '((username . "This field must match the regular expression #rx\".+@.+\".")
+       (form-validate login-form (hash "username" (make-binding "bogdan")
+                                       "password" (make-binding "hunter2")))
+       (err '((username . "This field must contain an e-mail address.")
               (password . "This field must contain 9 or more characters.")))))
 
     (test-case "can validate good inputs"
@@ -113,45 +115,7 @@
     (test-case "can process good inputs"
       (check-match
        (form-process login-form valid-login-data)
-       (list 'passed (login-data "bogdan@example" "hunter1234") procedure?))))
-
-   (test-suite
-    "composite"
-
-    (test-case "can validate missing inputs"
-      (check-equal?
-       (form-validate release-form (hash))
-       (err '((author . ((name . "This field is required.")
-                         (email . "This field is required.")))
-              (package . ((name . "This field is required.")
-                          (version . "This field is required.")))))))
-
-    (test-case "can validate bad inputs"
-      (check-equal?
-       (form-validate release-form (hash "author.name" "Bogdan Popa"
-                                         "author.email" "bogdan@defn.io"
-                                         "package.name" "forms"
-                                         "package.version" "a"))
-       (err '((package . ((version . "Invalid version.")))))))
-
-    (test-case "can validate good inputs"
-      (check-equal?
-       (form-validate release-form (hash "author.name" "Bogdan Popa"
-                                         "author.email" "bogdan@defn.io"
-                                         "package.name" "forms"
-                                         "package.version" "1.5.3"))
-       (ok (release (author "Bogdan Popa" "bogdan@defn.io")
-                    (package "forms" '(1 5 3)))))))))
-
-
-;; Widgets ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define widget-tests
-  (test-suite
-   "widget"
-
-   (test-suite
-    "simple"
+       (list 'passed (login-data "bogdan@example" "hunter1234") procedure?)))
 
     (test-case "can render pending forms"
       (match (form-process login-form (hash) #:submitted? #f)
@@ -175,8 +139,7 @@
                  (label "Password" (input ((type "password") (name "password"))))))]))
 
     (test-case "can render passed forms"
-      (match (form-process login-form (hash "username" (make-binding "bogdan@example")
-                                            "password" (make-binding "hunter1234")))
+      (match (form-process login-form valid-login-data)
         [(list 'passed data render-widget)
          (check-equal? data (login-data "bogdan@example" "hunter1234"))
          (check-equal?
@@ -187,7 +150,26 @@
                  (label "Password" (input ((type "password") (name "password"))))))])))
 
    (test-suite
-    "complex"
+    "composite"
+
+    (test-case "can validate missing inputs"
+      (check-equal?
+       (form-validate release-form (hash))
+       (err '((author . ((name . "This field is required.")
+                         (email . "This field is required.")))
+              (package . ((name . "This field is required.")
+                          (version . "This field is required.")))))))
+
+    (test-case "can validate bad inputs"
+      (check-equal?
+       (form-validate release-form (hash-set valid-release-data "package.version" (make-binding "a")))
+       (err '((package . ((version . "Invalid version.")))))))
+
+    (test-case "can validate good inputs"
+      (check-equal?
+       (form-validate release-form valid-release-data)
+       (ok (release (author "Bogdan Popa" "bogdan@defn.io")
+                    (package "forms" '(1 5 3))))))
 
     (test-case "can render pending forms"
       (match (form-process release-form (hash) #:submitted? #f)
@@ -206,97 +188,8 @@
                   (div
                    (label "Name" (input ((type "text") (name "package.name"))))
                    (label "Version" (input ((type "text") (name "package.version"))))))
-                 (button ((type "submit")) "Save")))]))
-
-    (test-case "can render fields' default values"
-      (match (form-process (form* [(x text)] x)
-                           (hash)
-                           #:defaults (hash "x" "default")
-                           #:submitted? #f)
-        [(list 'pending _ render-widget)
-         (check-equal?
-          (render-widget "x" (widget-hidden))
-          '(input ((type "hidden") (name "x") (value "default"))))
-
-         (check-equal?
-          (render-widget "x" (widget-checkbox))
-          '(input ((type "checkbox") (name "x") (value "default") (checked "checked"))))]))
-
-    (test-case "raises a user error when attempting to render unknown fields"
-      (match (form-process (form* [(x text)] x) (hash) #:submitted? #f)
-        [(list 'pending _ render-widget)
-         (check-exn exn:fail:user? (lambda ()
-                                     (render-widget "y" (widget-text))))])))
-
-   (test-suite
-    "widget-radio-group"
-
-    (test-case "can render simple option lists"
-      (match (form-process (form* [(x text)] x) (hash) #:submitted? #f)
-        [(list 'pending _ render-widget)
-         (check-equal?
-          (render-widget "x" (widget-radio-group '(("cat" . "Cat")
-                                                   ("dog" . "Dog"))))
-          '(div
-            (label (input ((type "radio") (name "x") (value "cat"))) "Cat")
-            (label (input ((type "radio") (name "x") (value "dog"))) "Dog")))])
-
-      (match (form-process (form* [(x text)] x)
-                           (hash)
-                           #:defaults (hash "x" "cat")
-                           #:submitted? #f)
-        [(list 'pending _ render-widget)
-         (check-equal?
-          (render-widget "x" (widget-radio-group '(("cat" . "Cat")
-                                                   ("dog" . "Dog"))))
-          '(div
-            (label (input ((type "radio") (name "x") (value "cat") (checked "checked"))) "Cat")
-            (label (input ((type "radio") (name "x") (value "dog"))) "Dog")))])))
-
-   (test-suite
-    "widget-select"
-
-    (test-case "can render simple option lists"
-      (match (form-process (form* [(x text)] x) (hash) #:submitted? #f)
-        [(list 'pending _ render-widget)
-         (check-equal?
-          (render-widget "x" (widget-select '(("cat" . "Cat")
-                                              ("dog" . "Dog"))))
-          '(select
-            ((name "x"))
-            (option ((value "cat")) "Cat")
-            (option ((value "dog")) "Dog")))])
-
-      (match (form-process (form* [(x text)] x)
-                           (hash)
-                           #:defaults (hash "x" "cat")
-                           #:submitted? #f)
-        [(list 'pending _ render-widget)
-         (check-equal?
-          (render-widget "x" (widget-select '(("cat" . "Cat")
-                                              ("dog" . "Dog"))))
-          '(select
-            ((name "x"))
-            (option ((value "cat") (selected "selected")) "Cat")
-            (option ((value "dog")) "Dog")))]))
-
-    (test-case "can render option groups"
-      (match (form-process (form* [(x text)] x) (hash) #:submitted? #f)
-        [(list 'pending _ render-widget)
-         (check-equal?
-          (render-widget "x" (widget-select (hash "Animals" '(("cat" . "Cat")
-                                                              ("dog" . "Dog")))))
-          '(select
-            ((name "x"))
-            (optgroup
-             ((label "Animals"))
-             (option ((value "cat")) "Cat")
-             (option ((value "dog")) "Dog"))))])))))
+                 (button ((type "submit")) "Save")))])))))
 
 (module+ test
   (require rackunit/text-ui)
-  (run-tests (test-suite
-              "form"
-
-              form-tests
-              widget-tests)))
+  (run-tests form-tests))

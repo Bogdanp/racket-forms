@@ -17,6 +17,7 @@
   [widget-email (->* () (#:attributes attributes/c) widget/c)]
   [widget-file (->* () (#:attributes attributes/c) widget/c)]
   [widget-hidden (->* () (#:attributes attributes/c) widget/c)]
+  [widget-number (->* () (#:attributes attributes/c) widget/c)]
   [widget-password (->* () (#:attributes attributes/c) widget/c)]
   [widget-radio-group (->* (options/c) (#:attributes attributes/c) widget/c)]
   [widget-select (->* ((or/c (hash/c string? options/c) options/c)) (#:attributes attributes/c) widget/c)]
@@ -101,6 +102,10 @@
 
 (define (widget-hidden #:attributes [attributes null])
   (widget-input #:type "hidden"
+                #:attributes attributes))
+
+(define (widget-number #:attributes [attributes null])
+  (widget-input #:type "number"
                 #:attributes attributes))
 
 (define (widget-password #:attributes [attributes null])
