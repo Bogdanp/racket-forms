@@ -122,7 +122,7 @@ the above form like this:
       (string-upcase name)))
 ]
 
-If you're thinking "Hey, that looks like a @racket[let*]"!  You're on
+If you're thinking "Hey, that looks like a @racket[let]"!  You're on
 the right track.
 
 @subsubsection[#:tag "Presentation"]{Presentation}
