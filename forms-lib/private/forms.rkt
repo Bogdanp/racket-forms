@@ -72,6 +72,8 @@
 (define (form-validate form bindings)
   (validate form bindings ""))
 
+(define (combine/key/keep-newer k _ v) v)
+
 (define (form-process form bindings
                       #:defaults [defaults (hash)]
                       #:submitted? [submitted? #t])
@@ -86,7 +88,7 @@
          [else            value]))))
 
   (define all-bindings
-    (hash-union normalized-defaults bindings #:combine/key (lambda (k _ v) v)))
+    (hash-union normalized-defaults bindings #:combine/key combine/key/keep-newer))
 
   (define ((make-widget-renderer errors) name widget)
     (when (not (form-lookup form name))

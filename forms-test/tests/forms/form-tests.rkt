@@ -4,6 +4,7 @@
          racket/match
          racket/string
          rackunit
+         (only-in web-server/http make-binding:form)
          "util.rkt")
 
 (provide form-tests)
@@ -87,25 +88,44 @@
    "form"
 
    (test-suite
-    "simple"
+    "form-validate"
 
     (test-case "can validate missing inputs"
       (check-equal?
        (form-validate login-form (hash))
        (err '((username . "This field is required.")
-              (password . "This field is required.")))))
+              (password . "This field is required."))))
+
+      (check-equal?
+       (form-validate release-form (hash))
+       (err '((author . ((name . "This field is required.")
+                         (email . "This field is required.")))
+              (package . ((name . "This field is required.")
+                          (version . "This field is required.")))))))
 
     (test-case "can validate bad inputs"
       (check-equal?
        (form-validate login-form (hash "username" (make-binding "bogdan")
                                        "password" (make-binding "hunter2")))
        (err '((username . "This field must contain an e-mail address.")
-              (password . "This field must contain 9 or more characters.")))))
+              (password . "This field must contain 9 or more characters."))))
+
+      (check-equal?
+       (form-validate release-form (hash-set valid-release-data "package.version" (make-binding "a")))
+       (err '((package . ((version . "Invalid version.")))))))
 
     (test-case "can validate good inputs"
       (check-equal?
        (form-validate login-form valid-login-data)
-       (ok (login-data "bogdan@example" "hunter1234"))))
+       (ok (login-data "bogdan@example" "hunter1234")))
+
+      (check-equal?
+       (form-validate release-form valid-release-data)
+       (ok (release (author "Bogdan Popa" "bogdan@defn.io")
+                    (package "forms" '(1 5 3)))))))
+
+   (test-suite
+    "form-process"
 
     (test-case "can process pending inputs"
       (check-match
@@ -150,26 +170,7 @@
                  (label "Password" (input ((type "password") (name "password"))))))])))
 
    (test-suite
-    "composite"
-
-    (test-case "can validate missing inputs"
-      (check-equal?
-       (form-validate release-form (hash))
-       (err '((author . ((name . "This field is required.")
-                         (email . "This field is required.")))
-              (package . ((name . "This field is required.")
-                          (version . "This field is required.")))))))
-
-    (test-case "can validate bad inputs"
-      (check-equal?
-       (form-validate release-form (hash-set valid-release-data "package.version" (make-binding "a")))
-       (err '((package . ((version . "Invalid version.")))))))
-
-    (test-case "can validate good inputs"
-      (check-equal?
-       (form-validate release-form valid-release-data)
-       (ok (release (author "Bogdan Popa" "bogdan@defn.io")
-                    (package "forms" '(1 5 3))))))
+    "form-process+widget-renderer"
 
     (test-case "can render pending forms"
       (match (form-process release-form (hash) #:submitted? #f)
@@ -188,7 +189,22 @@
                   (div
                    (label "Name" (input ((type "text") (name "package.name"))))
                    (label "Version" (input ((type "text") (name "package.version"))))))
-                 (button ((type "submit")) "Save")))])))))
+                 (button ((type "submit")) "Save")))])))
+
+   (test-suite
+    "form-run"
+
+    (test-case "treats GET requests as not submitted"
+      (match (form-run release-form (make-request))
+        [(list res _ _)
+         (check-equal? res 'pending)]))
+
+    (test-case "treats POST requests as submitted"
+      (match (form-run login-form (make-request #:method #"POST"
+                                                #:bindings (list (make-binding:form #"username" #"bogdan@example.com")
+                                                                 (make-binding:form #"password" #"hunter1234"))))
+        [(list res _ _)
+         (check-equal? res 'passed)])))))
 
 (module+ test
   (require rackunit/text-ui)
