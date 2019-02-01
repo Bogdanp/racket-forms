@@ -52,6 +52,7 @@ A basic form might look like this:
   #:hidden
   (require forms/base
            racket/match
+           racket/pretty
            racket/promise
            net/url
            web-server/http)
@@ -265,7 +266,10 @@ result and a widget renderer.  That same renderer can be passed to our
 @examples[
   #:eval eval
   #:label #f
-  (form-run login-form (make-request))
+  (match-define (list _ _ render-widget)
+    (form-run login-form (make-request)))
+
+  (pretty-print (render-login-form render-widget))
 ]
 
 If we pass it an empty POST request instead, the data will be
