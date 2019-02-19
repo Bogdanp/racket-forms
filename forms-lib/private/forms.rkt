@@ -30,29 +30,37 @@
              (list (cons 'name f) ...))]))
 
 (define (validate form bindings namespace)
-  (for/fold ([results null]
-             [errors null]
-             #:result (if (null? errors)
-                          (ok (apply (form-constructor form) (reverse results)))
-                          (err (reverse errors))))
-            ([child (form-children form)])
+  (define-values (results errors)
+    (for/fold ([results null]
+               [errors null])
+              ([child (in-list (form-children form))])
 
-    (define name (car child))
-    (define formlet (cdr child))
-    (define res
+      (define name (car child))
+      (define formlet (cdr child))
+      (define res
+        (cond
+          [(form? formlet)
+           (define form-namespace (string-append namespace (symbol->string name) "."))
+           (validate formlet bindings form-namespace)]
+
+          [else
+           (define full-name (string-append namespace (symbol->string name)))
+           (define binding (hash-ref bindings full-name #f))
+           (formlet binding)]))
+
       (cond
-        [(form? formlet)
-         (define form-namespace (string-append namespace (symbol->string name) "."))
-         (validate formlet bindings form-namespace)]
+        [(ok? res) (values (cons (cdr res) results) errors)]
+        [else (values results (cons (cons name (cdr res)) errors))])))
 
-        [else
-         (define full-name (string-append namespace (symbol->string name)))
-         (define binding (hash-ref bindings full-name #f))
-         (formlet binding)]))
+  (cond
+    [(null? errors)
+     (define res (apply (form-constructor form) (reverse results)))
+     (cond
+       [(ok?  res) res]
+       [(err? res) res]
+       [else   (ok res)])]
 
-    (cond
-      [(ok? res) (values (cons (cdr res) results) errors)]
-      [else (values results (cons (cons name (cdr res)) errors))])))
+    [else (err (reverse errors))]))
 
 (define (form-lookup form full-name)
   (for/fold ([formlet #f]

@@ -9,6 +9,18 @@
 
 (provide form-tests)
 
+(struct signup-data (username password)
+  #:transparent)
+
+(define signup-form
+  (form* ([username (ensure binding/email (required))]
+          [password (form* ([p1 (ensure binding/text (required) (longer-than 8))]
+                            [p2 (ensure binding/text (required) (longer-than 8))])
+                      (cond
+                        [(string=? p1 p2) (ok p1)]
+                        [else (err "The passwords must match.")]))])
+    (signup-data username password)))
+
 (struct login-data (username password)
   #:transparent)
 
@@ -122,7 +134,25 @@
       (check-equal?
        (form-validate release-form valid-release-data)
        (ok (release (author "Bogdan Popa" "bogdan@defn.io")
-                    (package "forms" '(1 5 3)))))))
+                    (package "forms" '(1 5 3))))))
+
+    (test-case "can validate nested inputs"
+      (check-equal?
+       (form-validate signup-form (hash "username" (make-binding "bogdan@defn.io")))
+       (err '((password (p1 . "This field is required.")
+                        (p2 . "This field is required.")))))
+
+      (check-equal?
+       (form-validate signup-form (hash "username"    (make-binding "bogdan@defn.io")
+                                        "password.p1" (make-binding "password-123-a")
+                                        "password.p2" (make-binding "password-123-b")))
+       (err '((password . "The passwords must match."))))
+
+      (check-equal?
+       (form-validate signup-form (hash "username"    (make-binding "bogdan@defn.io")
+                                        "password.p1" (make-binding "password-123-a")
+                                        "password.p2" (make-binding "password-123-a")))
+       (ok (signup-data "bogdan@defn.io" "password-123-a")))))
 
    (test-suite
     "form-process"

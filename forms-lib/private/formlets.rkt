@@ -90,7 +90,7 @@
   (lift (lambda (v)
           (if (binding:form? v)
               (ok (bytes->string/utf-8 (binding:form-value v)))
-              (err "Expected a binding:text.")))))
+              (err "Expected a binding:form.")))))
 
 (define binding/boolean
   (ensure binding/text to-boolean))

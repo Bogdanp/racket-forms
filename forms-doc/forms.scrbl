@@ -309,6 +309,30 @@ like this:
        (response/xexpr (render-login-form render-widget))]))
 ]
 
+@subsubsection[#:tag "nesting"]{Nested Validation}
+
+I left one thing out of the tutorial that you might be wondering
+about.  Aside from plain values, @racket[form]s can also return
+@racket[ok?] or @racket[err?] values.  This makes it possible to do
+things like validate that two fields have the same value.
+
+@examples[
+  #:eval eval
+  #:label #f
+  #:no-prompt
+  (define signup-form
+    (form* ([username (ensure binding/email (required) (shorter-than 150))]
+            [password (form* ([p1 (ensure binding/text (required) (longer-than 8))]
+                              [p2 (ensure binding/text (required) (longer-than 8))])
+                        (cond
+                          [(string=? p1 p2) (ok p1)]
+                          [else (err "The passwords must match.")]))])
+      (list username password)))
+]
+
+This form will validate that the two password fields contain the same
+value and then return the first value.
+
 @subsubsection[#:tag "next-steps"]{Next Steps}
 
 If the tutorial left you wanting for more, take a look at the
@@ -339,6 +363,7 @@ The following features are not currently supported (and may never be):
     something and also to edit that thing
   }
 ]
+
 
 @;; Reference ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -384,9 +409,22 @@ The following features are not currently supported (and may never be):
   Converts an optional @racket[binding:form] to a @racket[symbol?].
 }
 
-@subsubsection[#:tag "combinators"]{Combinators}
+@subsubsection[#:tag "primitives"]{Primitives}
 
-These functions produce formlets by combining other formlets.
+These functions produce formlets either by combining other formlets or
+by "lifting" normal values into the formlet space.
+
+@deftogether[
+  (@defproc[(ok [x any/c]) (cons/c 'ok any/c)]
+   @defproc[(ok? [x any/c]) boolean?])]{
+  Create a formlet that always returns @racket[x].
+}
+
+@deftogether[
+  (@defproc[(err [x any/c]) (cons/c 'err any/c)]
+   @defproc[(err? [x any/c]) boolean?])]{
+  Create an errored formlet.
+}
 
 @defproc[(ensure [f (-> any/c (or/c (cons/c 'ok any/c)
                                     (cons/c 'err string?)))] ...+) (-> any/c (or/c (cons/c 'ok any/c)
