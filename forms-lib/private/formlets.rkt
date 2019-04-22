@@ -4,6 +4,7 @@
          racket/string
          web-server/http
          "contracts.rkt"
+         "l10n.rkt"
          "unsafe/prim.rkt")
 
 (provide
@@ -36,17 +37,17 @@
       (f v)
       (ok v)))
 
-(define ((required #:message [message "This field is required."]) v)
+(define ((required #:message [message (translate 'err-required)]) v)
   (or (and v (not (string=? "" v)) (ok v))
       (err message)))
 
-(define (matches p #:message [message (format "This field must match the regular expression ~v." p)])
+(define (matches p #:message [message (translate 'err-matches p)])
   (lift (lambda (v)
           (if (regexp-match? p v)
               (ok v)
               (err message)))))
 
-(define (one-of pairs #:message [message (format "This field must contain one of the following values: ~a" (string-join (map car pairs) ", "))])
+(define (one-of pairs #:message [message (translate 'err-one-of (string-join (map car pairs) ", "))])
   (lift (lambda (v)
           (define pair
             (findf (lambda (pair)
@@ -55,13 +56,13 @@
               (ok (cdr pair))
               (err message)))))
 
-(define (shorter-than n #:message [message (format "This field must contain ~a or fewer characters." (sub1 n))])
+(define (shorter-than n #:message [message (translate 'err-shorter-than (sub1 n))])
   (lift (lambda (v)
           (if (< (string-length v) n)
               (ok v)
               (err message)))))
 
-(define (longer-than n #:message [message (format "This field must contain ~a or more characters." (add1 n))])
+(define (longer-than n #:message [message (translate 'err-longer-than (add1 n))])
   (lift (lambda (v)
           (if (> (string-length v) n)
               (ok v)
@@ -70,7 +71,7 @@
 (define (to-boolean v)
   (ok (not (not v))))
 
-(define (to-number #:message [message (format "This field must contain a number.")])
+(define (to-number #:message [message (translate 'err-to-number)])
   (lift (lambda (v)
           (define n (string->number v))
           (if n
@@ -99,7 +100,7 @@
   (ensure binding/text to-boolean))
 
 (define binding/email
-  (ensure binding/text (matches #rx".+@.+" #:message "This field must contain an e-mail address.")))
+  (ensure binding/text (matches #rx".+@.+" #:message (translate 'err-binding/email))))
 
 (define binding/number
   (ensure binding/text (to-number)))
