@@ -68,7 +68,7 @@
               (err message)))))
 
 (define (to-boolean v)
-  (ok (and v #t)))
+  (ok (not (not v))))
 
 (define (to-number #:message [message (format "This field must contain a number.")])
   (lift (lambda (v)
@@ -89,7 +89,10 @@
 (define binding/text
   (lift (lambda (v)
           (if (binding:form? v)
-              (ok (bytes->string/utf-8 (binding:form-value v)))
+              (let ([v (bytes->string/utf-8 (binding:form-value v))])
+                (if (non-empty-string? v)
+                    (ok v)
+                    (ok #f)))
               (err "Expected a binding:form.")))))
 
 (define binding/boolean
