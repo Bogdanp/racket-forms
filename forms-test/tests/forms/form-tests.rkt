@@ -9,6 +9,9 @@
 
 (provide form-tests)
 
+(define empty-form
+  (form* () #f))
+
 (struct signup-data (username password)
   #:transparent)
 

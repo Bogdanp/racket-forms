@@ -25,7 +25,7 @@
 
 (define-syntax (form* stx)
   (syntax-parse stx
-    [(_ ([name:id f:expr] ...+) e:expr ...+)
+    [(_ ([name:id f:expr] ...) e:expr ...+)
      #'(form (lambda (name ...) e ...)
              (list (cons 'name f) ...))]))
 
