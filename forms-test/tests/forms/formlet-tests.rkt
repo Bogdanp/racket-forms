@@ -82,7 +82,10 @@
         (check-equal? ((ensure binding/text (required)) #f) (err "This field is required.")))
 
       (test-case "can error given an empty string"
-        (check-equal? ((ensure binding/text (required)) (make-binding "")) (err "This field is required."))))
+        (check-equal? ((ensure binding/text (required)) (make-binding "")) (err "This field is required.")))
+
+      (test-case "works with binding/number"
+        (check-equal? ((ensure binding/number (required)) (make-binding "1")) (ok 1))))
 
      (test-suite
       "one-of"
@@ -95,7 +98,24 @@
 
       (test-case "can map value tags to concrete values"
         (check-equal?
-         ((ensure binding/text (one-of '(("a" . concrete)))) (make-binding "a")) (ok 'concrete)))))))
+         ((ensure binding/text (one-of '(("a" . concrete)))) (make-binding "a")) (ok 'concrete)))
+
+      (test-case "works with binding/number"
+        (check-equal?
+         ((ensure binding/number (one-of '((1 . one)
+                                           (2 . two)))) (make-binding "3")) (err "This field must contain one of the following values: 1, 2"))
+
+        (check-equal?
+         ((ensure binding/number (one-of '((1 . one)
+                                           (2 . two)))) (make-binding "1")) (ok 'one)))
+
+      (test-case "works with binding/symbol"
+        (check-equal?
+         ((ensure binding/symbol (one-of '((a . b)))) (make-binding "b")) (err "This field must contain one of the following values: a"))
+
+        (check-equal?
+         ((ensure binding/symbol (one-of '((a . a)
+                                           (b . b)))) (make-binding "a")) (ok 'a)))))))
 
 (module+ test
   (require rackunit/text-ui)

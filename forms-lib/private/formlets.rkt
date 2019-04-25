@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require racket/contract/base
+         racket/function
          racket/string
          web-server/http
          "contracts.rkt"
@@ -13,7 +14,7 @@
 
   [required (->* () (#:message string?) formlet/c)]
   [matches (->* (regexp?) (#:message string?) formlet/c)]
-  [one-of (->* ((listof (cons/c string? any/c))) (#:message string?) formlet/c)]
+  [one-of (->* ((listof (cons/c any/c any/c))) (#:message string?) formlet/c)]
   [shorter-than (->* (exact-positive-integer?) (#:message string?) formlet/c)]
   [longer-than (->* (exact-positive-integer?) (#:message string?) formlet/c)]
   [to-boolean formlet/c]
@@ -38,7 +39,8 @@
       (ok v)))
 
 (define ((required #:message [message (translate 'err-required)]) v)
-  (or (and v (not (string=? "" v)) (ok v))
+  (if v
+      (ok v)
       (err message)))
 
 (define (matches p #:message [message (translate 'err-matches p)])
@@ -47,14 +49,14 @@
               (ok v)
               (err message)))))
 
-(define (one-of pairs #:message [message (translate 'err-one-of (string-join (map car pairs) ", "))])
+(define (one-of pairs #:message [message (translate 'err-one-of (string-join (map (compose1 (curry format "~a") car) pairs) ", "))])
   (lift (lambda (v)
-          (define pair
-            (findf (lambda (pair)
-                     (string=? v (car pair))) pairs))
-          (if pair
-              (ok (cdr pair))
-              (err message)))))
+          (cond
+            [(findf (lambda (pair)
+                      (equal? v (car pair))) pairs)
+             => (compose1 ok cdr)]
+
+            [else (err message)]))))
 
 (define (shorter-than n #:message [message (translate 'err-shorter-than (sub1 n))])
   (lift (lambda (v)

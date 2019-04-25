@@ -438,7 +438,7 @@ by "lifting" normal values into the formlet space.
 These functions produce basic validator formlets.
 
 @defproc[(required [#:message message string? "This field is required."])
-         (-> (or/c false/c string?)
+         (-> (or/c false/c any/c)
              (or/c (cons/c 'ok string?)
                    (cons/c 'err string?)))]{
   Ensures that a non-empty @racket[string?] value is present.
@@ -452,9 +452,9 @@ These functions produce basic validator formlets.
   Ensures that an optional @racket[string?] matches the given @racket[pattern].
 }
 
-@defproc[(one-of [pairs (listof (cons/c string? any/c))]
+@defproc[(one-of [pairs (listof (cons/c any/c any/c))]
                  [#:message message string? (format "This field must contain one of the following values: ~a" (string-join (map car pairs) ", "))])
-         (-> (or/c (false/c string?))
+         (-> (or/c (false/c any/c))
              (or/c (cons/c 'ok any/c)
                    (cons/c 'err string?)))]{
   Ensures that an optional @racket[string?] is equal to one of the
