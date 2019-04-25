@@ -84,8 +84,16 @@
       (test-case "can error given an empty string"
         (check-equal? ((ensure binding/text (required)) (make-binding "")) (err "This field is required.")))
 
+      (test-case "works with binding/file"
+        (check-equal? ((ensure binding/file (required)) (binding:file #"" #"" null #"")) (err "This field is required.")))
+
       (test-case "works with binding/number"
-        (check-equal? ((ensure binding/number (required)) (make-binding "1")) (ok 1))))
+        (check-equal? ((ensure binding/number (required)) (make-binding "")) (err "This field is required."))
+        (check-equal? ((ensure binding/number (required)) (make-binding "1")) (ok 1)))
+
+      (test-case "works with binding/symbol"
+        (check-equal? ((ensure binding/symbol (required)) (make-binding "")) (err "This field is required."))
+        (check-equal? ((ensure binding/symbol (required)) (make-binding "a")) (ok 'a))))
 
      (test-suite
       "one-of"

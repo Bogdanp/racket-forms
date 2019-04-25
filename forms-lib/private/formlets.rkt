@@ -85,8 +85,10 @@
 
 (define binding/file
   (lift (lambda (v)
-          (if (binding:file? v)
-              (ok v)
+          (if (and (binding:file? v))
+              (if (bytes=? (binding:file-filename v) #"")
+                  (ok #f)
+                  (ok v))
               (err "Expected a binding:file.")))))
 
 (define binding/text
