@@ -300,7 +300,7 @@ like this:
   #:label #f
   #:no-prompt
   (define (login req)
-    (match (form-run req)
+    (match (form-run login-form req)
       [(list 'passed (list username password) _)
        (login-user! username password)
        (redirect-to "/dashboard")]
