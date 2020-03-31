@@ -153,8 +153,8 @@ x-expression:
   #:no-prompt
   (define (render-login-form)
     '(form
-       ((action ""))
-       ((method "POST"))
+       ((action "")
+        (method "POST"))
        (label
          "Username"
          (input ((type "email") (name "username"))))
@@ -185,8 +185,8 @@ input:
   #:no-prompt
   (define (render-login-form render-widget)
     '(form
-       ((action ""))
-       ((method "POST"))
+       ((action "")
+        (method "POST"))
        (label
          "Username"
          (input ((type "email") (name "username"))))
@@ -205,8 +205,8 @@ render-widget to render the appropriate widgets for those fields:
   #:no-prompt
   (define (render-login-form render-widget)
     `(form
-       ((action ""))
-       ((method "POST"))
+       ((action "")
+        (method "POST"))
        (label
          "Username"
          ,(render-widget "username" (widget-email)))
@@ -224,8 +224,8 @@ Finally, we can also begin rendering errors:
   #:no-prompt
   (define (render-login-form render-widget)
     `(form
-       ((action ""))
-       ((method "POST"))
+       ((action "")
+        (method "POST"))
        (label
          "Username"
          ,(render-widget "username" (widget-email)))
