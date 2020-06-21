@@ -15,7 +15,7 @@
 
  (contract-out
   [struct form ([constructor any/c]
-                [children (listof (cons/c symbol? (or formlet/c form?)))])]
+                [children (listof (cons/c symbol? (or/c formlet/c form?)))])]
   [form-validate (-> form? bindings/c res/c)]
   [form-process (->* (form? bindings/c) (#:defaults bindings/c #:submitted? boolean?) validation/c)]
   [form-run (->* (form? request?) (#:defaults bindings/c #:submit-methods (listof bytes?)) validation/c)]))
