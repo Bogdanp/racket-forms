@@ -17,13 +17,12 @@
 
 @section[#:tag "intro"]{Introduction}
 
-This library lets you declaratively validate web form data (and
-potentially json, xml and other structured data).  It differs from the
-formlets provided by @secref["formlets" #:doc '(lib "web-server/scribblings/web-server.scrbl")]
-in two important ways:
+This library lets you declaratively validate web form data.  It
+differs from the formlets provided by @secref["formlets" #:doc '(lib
+"web-server/scribblings/web-server.scrbl")] in two important ways:
 
 @itemlist[
-  @item{the validation model and the presentation are separate, and}
+  @item{validation and presentation are separate, and}
   @item{you are given the ability to display and control validation errors.}
 ]
 
@@ -31,11 +30,8 @@ in two important ways:
 
 @subsubsection[#:tag "validation"]{Validation}
 
-@racket[form]s are composed of other forms and formlets, functions
-that can take an input, validate it and potentially transform it into
-another value.
-
-A basic form might look like this:
+@racket[form]s are composed of other forms and @tech{formlets}.  A
+basic form might look like this:
 
 @(define eval
    (call-with-trusted-sandbox-configuration
@@ -44,6 +40,9 @@ A basic form might look like this:
                        [sandbox-error-output 'string]
                        [sandbox-memory-limit 50])
           (make-evaluator 'racket/base)))))
+
+@(define-syntax-rule (demo e ...)
+   (examples #:eval eval #:label #f e ...))
 
 @examples[
   #:eval eval
@@ -58,9 +57,7 @@ A basic form might look like this:
            web-server/http)
 ]
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define simple-form
     (form
@@ -73,9 +70,7 @@ This form accepts an optional text value named @racket["name"] and
 returns its upper-cased version.  To validate some data against this
 form we can call @racket[form-validate]:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   (form-validate simple-form (hash))
   (form-validate simple-form (hash "name" (make-binding:form #"name" #"Bogdan")))
 ]
@@ -85,9 +80,7 @@ validations.  If we wanted the above form to require the
 @racket["name"] field, we'd combine @racket[binding/text] with
 @racket[required] using @racket[ensure]:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define simple-form
     (form
@@ -99,9 +92,7 @@ validations.  If we wanted the above form to require the
 If we validate the same data against @racket[simple-form] now, our
 results differ slightly:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   (form-validate simple-form (hash))
   (form-validate simple-form (hash "name" (make-binding:form #"name" #"Bogdan")))
 ]
@@ -112,13 +103,11 @@ lambda.
 
 So far so good, but the syntax used to declare these forms can get
 unwieldy as soon as your forms grow larger than a couple fields.  The
-library provides @racket[form*], which is a convenience macro to make
-writing large forms more manageable.  In day-to-day use, you'd declare
-the above form like this:
+library provides @racket[form*], which is a convenience macro designed
+to make writing large forms more manageable.  In day-to-day use, you'd
+declare the above form like this:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define simple-form
     (form* ([name (ensure binding/text (required))])
@@ -132,9 +121,7 @@ the right track.
 
 Let's take a slightly more complicated form:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define login-form
     (form* ([username (ensure binding/email (required) (shorter-than 150))]
@@ -147,9 +134,7 @@ characters and it returns a list containing the two values on success.
 To render this form to HTML, we can define a function that returns an
 x-expression:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define (render-login-form)
     '(form
@@ -175,13 +160,11 @@ This will do the trick, but it has two problems:
   }
 ]
 
-We can use "widgets" to fix both problems.  First, we have to update
-@racket[render-login-form] to take a widget rendering function as
-input:
+We can use @tech{widgets} to fix both problems.  First, we have to
+update @racket[render-login-form] to take a @racket[widget-renderer/c]
+as input:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define (render-login-form render-widget)
     '(form
@@ -197,11 +180,10 @@ input:
 ]
 
 Second, instead of rendering the input fields ourselves, we can tell
-render-widget to render the appropriate widgets for those fields:
+@racket[render-widget] to render the appropriate widgets for those
+fields:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define (render-login-form render-widget)
     `(form
@@ -218,9 +200,7 @@ render-widget to render the appropriate widgets for those fields:
 
 Finally, we can also begin rendering errors:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define (render-login-form render-widget)
     `(form
@@ -240,9 +220,7 @@ Finally, we can also begin rendering errors:
 To compose the validation and the presentation aspects, we can use
 @racket[form-run]:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define (make-request #:method [method #"GET"]
                         #:url [url "http://example.com"]
@@ -251,42 +229,34 @@ To compose the validation and the presentation aspects, we can use
     (request method (string->url url) headers (delay bindings) #f "127.0.0.1" 8000 "127.0.0.1"))
 ]
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   (form-run login-form (make-request))
 ]
 
 @racket[form-run] is smart enough to figure out whether or not the
 request should be validated based on the request method.  Because we
-passed it a (fake) GET request above, it returned a @racket['pending]
+gave it a @tt{GET} request above, it returned a @racket['pending]
 result and a widget renderer.  That same renderer can be passed to our
 @racket[render-login-form] function:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   (match-define (list _ _ render-widget)
     (form-run login-form (make-request)))
 
   (pretty-print (render-login-form render-widget))
 ]
 
-If we pass it an empty POST request instead, the data will be
+If we pass it an empty @tt{POST} request instead, the data will be
 validated and a @racket['failed] result will be returned:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   (form-run login-form (make-request #:method #"POST"))
 ]
 
-Finally, if we pass it a valid POST request, we'll get a
+Finally, if we pass it a valid @tt{POST} request, we'll get a
 @racket['passed] result:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   (form-run login-form (make-request #:method #"POST"
                                      #:bindings (list (make-binding:form #"username" #"bogdan@defn.io")
                                                       (make-binding:form #"password" #"hunter1234"))))
@@ -295,9 +265,7 @@ Finally, if we pass it a valid POST request, we'll get a
 Putting it all together, we might write a request handler that looks
 like this:
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define (login req)
     (match (form-run login-form req)
@@ -316,9 +284,7 @@ about.  Aside from plain values, @racket[form]s can also return
 @racket[ok?] or @racket[err?] values.  This makes it possible to do
 things like validate that two fields have the same value.
 
-@examples[
-  #:eval eval
-  #:label #f
+@demo[
   #:no-prompt
   (define signup-form
     (form* ([username (ensure binding/email (required) (shorter-than 150))]
@@ -331,21 +297,63 @@ things like validate that two fields have the same value.
 ]
 
 This form will validate that the two password fields contain the same
-value and then return the first value.
+value and then return the first of them.  When rendering the subform,
+you'd use @racket[widget-namespace] to produce a widget renderer for
+the nested form's fields.
 
 @subsubsection[#:tag "next-steps"]{Next Steps}
 
+@(define examples-url "https://github.com/Bogdanp/racket-forms/tree/master/examples")
+
 If the tutorial left you wanting for more, take a look at the
 reference documentation below and also check out the
-@link["https://github.com/Bogdanp/racket-forms/tree/master/examples"]{examples}
-folder in the source code repository.
+@link[examples-url]{examples} folder in the source code repository.
 
 
 @;; Reference ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 @section[#:tag "reference"]{Reference}
 
+@subsection[#:tag "forms"]{Forms}
+
+@defstruct[form ([constructor any/c]
+                 [children (listof (cons/c symbol? (or (cons/c (or/c 'ok 'err) any/c) form?)))])]{
+
+  Forms are composed of a list of @tech{formlets} and other forms.
+
+  Upon successful validation, the results of each of the
+  @racket[children] are passed in order to the @racket[constructor]
+  and an @racket[ok] value is returned.
+
+  On failure, an @racket[err] value is returned containing a list of
+  errors for every child that failed validation.
+}
+
+@defform[(form* ([name formlet] ...+)
+           e ...+)]{
+  Syntactic sugar for defining @racket[form]s.
+}
+
+@defproc[(form-validate [form form?]
+                        [bindings (hash/c string? any/c)]) (cons/c (or/c 'ok 'err) any/c)]{
+  Validate @racket[bindings] against @racket[form].
+}
+
+@defproc[(form-run [form form?]
+                   [request request?]
+                   [#:defaults defaults (hash/c string? binding?) (hash)]
+                   [#:submit-methods submit-methods (listof bytes?) '(#"DELETE" #"PATCH" #"POST" #"PUT")])
+         (or/c
+          (list/c 'passed any/c widget-renderer/c)
+          (list/c 'failed any/c widget-renderer/c)
+          (list/c 'pending false/c widget-renderer/c))]{
+  Validate @racket[request] against @racket[form].
+}
+
 @subsection[#:tag "formlets"]{Formlets}
+
+@deftech{Formlets} extract, validate and transform field values from
+forms.
 
 @defthing[binding/file (-> (or/c false/c binding:file?)
                            (or/c (cons/c 'ok (or/c false/c binding:file?))
@@ -393,19 +401,19 @@ by "lifting" normal values into the formlet space.
 @deftogether[
   (@defproc[(ok [x any/c]) (cons/c 'ok any/c)]
    @defproc[(ok? [x any/c]) boolean?])]{
-  Create a formlet that always returns @racket[x].
+  Creates a formlet that always returns @racket[x].
 }
 
 @deftogether[
   (@defproc[(err [x any/c]) (cons/c 'err any/c)]
    @defproc[(err? [x any/c]) boolean?])]{
-  Create an errored formlet.
+  Creates an errored formlet.
 }
 
 @defproc[(ensure [f (-> any/c (or/c (cons/c 'ok any/c)
                                     (cons/c 'err string?)))] ...+) (-> any/c (or/c (cons/c 'ok any/c)
                                                                                    (cons/c 'err string?)))]{
-  Sequence two or more formlets together, producing a formlet that
+  Sequences two or more formlets together, producing a formlet that
   short-circuits on the first error.
 }
 
@@ -454,101 +462,163 @@ These functions produce basic validator formlets.
   Ensures that an optional @racket[string?] is longer than @racket[n].
 }
 
-@subsection[#:tag "forms"]{Forms}
-
-@defstruct[form ([constructor any/c]
-                 [children (listof (cons/c symbol? (or (cons/c (or/c 'ok 'err) any/c) form?)))])]{
-  A form that can be used to validate @racket[children] together and
-  produce a result value by passing the results of each field to
-  @racket[constructor].
-}
-
-@defform[(form* ([name formlet] ...+)
-           e ...+)]{
-  Syntactic sugar for defining @racket[form]s.
-}
-
-@defproc[(form-validate [form form?]
-                        [bindings (hash/c string? any/c)]) (cons/c (or/c 'ok 'err) any/c)]{
-  Validate @racket[bindings] against @racket[form].
-}
-
-@defproc[(form-run [form form?]
-                   [request request?]
-                   [#:defaults defaults (hash/c string? binding?) (hash)]
-                   [#:submit-methods submit-methods (listof bytes?) '(#"DELETE" #"PATCH" #"POST" #"PUT")])
-         (or/c
-          (list/c 'passed any/c widget-renderer/c)
-          (list/c 'failed any/c widget-renderer/c)
-          (list/c 'pending false/c widget-renderer/c))]{
-  Validate @racket[request] against @racket[form].
-}
-
 @subsection[#:tag "widgets"]{Widgets}
 
-@deftogether[
-  (@defthing[attributes/c (listof (list/c symbol? string?))]
-   @defthing[errors/c (listof
-                        (or/c string? (cons/c symbol? (or/c string? errors/c))))]
-   @defthing[options/c (listof (cons/c string? string?))]
-   @defthing[widget/c (-> string? (or/c false/c binding?) errors/c (or/c xexpr/c (listof xexpr/c)))]
-   @defthing[widget-renderer/c (-> string? widget/c (or/c xexpr/c (listof xexpr/c)))])]{
-  Various widget-related contracts.
-}
-
-@defproc[(widget-namespace [namespace string?]
-                           [widget-renderer widget-renderer/c]) widget/c]{
-  Produce a widget renderer for a subform.
-}
-
-@defproc[(widget-errors [#:class class string?]) widget/c]{
-  Produce a widget that can render errors.
-}
+@deftech{Widgets} render fields into @racket[xexpr?]s.
 
 @defproc[(widget-input [#:type type string?]
                        [#:omit-value? omit-value? boolean? #f]
                        [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render an INPUT element.
+  Returns a widget that can render an @tt{<input>} element.
+}
+
+@defproc[(widget-errors [#:class class string?]) widget/c]{
+  Returns a widget that can render errors.
+
+  @demo[
+    ((widget-errors) "example" #f null)
+    ((widget-errors) "example" #f '((example . "this field is required")
+                                    (another-field . "this field is required")))
+  ]
 }
 
 @defproc[(widget-checkbox [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a checkbox INPUT element.
+  Returns a widget that can render an @tt{<input type="checkbox">} element.
+
+  @demo[
+    ((widget-checkbox) "example" #f null)
+    ((widget-checkbox) "example" (binding:form #"" #"value") null)
+  ]
 }
 
 @defproc[(widget-email [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a email INPUT element.
+  Returns a widget that can render an @tt{<input type="email">} element.
+
+  @demo[
+    ((widget-email) "example" #f null)
+    ((widget-email) "example" (binding:form #"" #"value@example.com") null)
+  ]
 }
 
 @defproc[(widget-file [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a file INPUT element.
+  Returns a widget that can render an @tt{<input type="file">} element.
+
+  @demo[
+    ((widget-file) "example" #f null)
+    ((widget-file) "example" (binding:file #"" #"filename" null #"content") null)
+  ]
 }
 
 @defproc[(widget-hidden [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a hidden INPUT element.
+  Returns a widget that can render an @tt{<input type="hidden">} element.
+
+  @demo[
+    ((widget-hidden) "example" #f null)
+    ((widget-hidden) "example" (binding:form #"" #"value") null)
+  ]
 }
 
 @defproc[(widget-number [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a number INPUT element.
+  Returns a widget that can render an @tt{<input type="number">} element.
+
+  @demo[
+    ((widget-number) "example" #f null)
+    ((widget-number) "example" (binding:form #"" #"1") null)
+  ]
 }
 
 @defproc[(widget-password [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a password INPUT element.
+  Returns a widget that can render an @tt{<input type="password">} element.
+
+  @demo[
+    ((widget-password) "example" #f null)
+    ((widget-password) "example" (binding:form #"" #"value") null)
+  ]
 }
 
-@defproc[(widget-select [options (or/c (hash/c string? options/c) options/c)]
+@defproc[(widget-select [options select-options/c]
                         [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a SELECT element.
+  Returns a widget that can render a @tt{<select>} element.
+
+  @demo[
+    (define sel
+      (widget-select '(("value-a" . "Label A")
+                       ("Countries" (("romania" . "Romania")
+                                     ("usa" . "United States of America")))
+                       ("Languages" (("english" . "English")
+                                     ("racket" . "Racket"))))))
+    (pretty-print (sel "example" #f null))
+    (pretty-print (sel "example" (binding:form #"" #"racket") null))
+  ]
 }
 
 @defproc[(widget-radio-group [options options/c]
                              [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a group of radio INPUTS.
+  Returns a widget that can render a group of @tt{<input type="radio">} elements.
+
+  @demo[
+    (define rg
+     (widget-radio-group '(("value-a" . "Label A")
+                           ("value-b" . "Label B"))))
+    (pretty-print (rg "example" #f null))
+    (pretty-print (rg "example" (binding:form #"" #"value-a") null))
+  ]
 }
 
 @defproc[(widget-text [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a text INPUT element.
+  Returns a widget that can render an @tt{<input type="text">} element.
+
+  @demo[
+    ((widget-text) "example" #f null)
+    ((widget-text) "example" (binding:form #"" #"value") null)
+  ]
 }
 
 @defproc[(widget-textarea [#:attributes attributes attributes/c null]) widget/c]{
-  Produce a widget that can render a textarea INPUT element.
+  Returns a widget that can render a @tt{<textarea>} element.
+
+  @demo[
+    ((widget-textarea) "example" #f null)
+    ((widget-textarea) "example" (binding:form #"" #"value") null)
+  ]
+}
+
+@defproc[(widget-namespace [namespace string?]
+                           [widget-renderer widget-renderer/c]) widget/c]{
+  Returns a widget renderer for the subform whose id is
+  @racket[namespace].
+}
+
+@subsubsection{Contracts}
+
+@defthing[attributes/c (listof (list/c symbol? string?))]{
+  The contract for element attributes.
+}
+
+@defthing[errors/c (listof (or/c string? (cons/c symbol? (or/c string? errors/c))))]{
+  The contract for lists of validation errors.
+}
+
+@defthing[options/c (listof (cons/c string? string?))]{
+  The contract for a list of @tt{<input type="radio">} options.
+}
+
+@defthing[select-options/c (listof
+                            (or/c (cons/c string? string?)
+                                  (list/c string? (listof (cons/c string? string?)))))]{
+  The contract for a list of @tt{<select>} element options.  The
+  list-based variant is used to represent option groups
+  (@tt{<optgroup> elements}).
+}
+
+@defthing[widget/c (-> string? (or/c false/c binding?) errors/c (or/c xexpr/c (listof xexpr/c)))]{
+  The contract for @tech{widgets}.  Widgets take a field name, its
+  associated binding (if any) and a list of errors and produces either
+  one or a list of @racket[xexpr?]s.
+}
+
+@defthing[widget-renderer/c (-> string? widget/c (or/c xexpr/c (listof xexpr/c)))]{
+  The contract for widget renderers.  Renderers take the name of a
+  field and a @tech{widget} that will render the field as one or more
+  xexpressions.
 }
