@@ -1,10 +1,10 @@
 #lang racket/base
 
 (require racket/contract/base
+         racket/match
          racket/string
          web-server/http
-         "contracts.rkt"
-         "forms.rkt")
+         "contracts.rkt")
 
 (provide
  (contract-out
@@ -20,16 +20,10 @@
   [widget-number (->* () (#:attributes attributes/c) widget/c)]
   [widget-password (->* () (#:attributes attributes/c) widget/c)]
   [widget-radio-group (->* (options/c) (#:attributes attributes/c) widget/c)]
-  [widget-select (->* ((or/c (hash/c string? options/c) options/c)) (#:attributes attributes/c) widget/c)]
+  [widget-select (->* ((or/c (hash/c string? options/c) select-options/c)) (#:attributes attributes/c) widget/c)]
   [widget-text (->* () (#:attributes attributes/c) widget/c)]
   [widget-textarea (->* () (#:omit-value? boolean?
                             #:attributes attributes/c) widget/c)]))
-
-(define attributes/c
-  (listof (list/c symbol? string?)))
-
-(define options/c
-  (listof (cons/c string? string?)))
 
 (define (lookup-errors errors full-name)
   (let loop ([path (map string->symbol (string-split full-name "."))]
@@ -49,21 +43,21 @@
 (define ((widget-namespace namespace widget-renderer) name widget)
   (widget-renderer (string-append namespace "." name) widget))
 
-(define ((widget-errors #:class [class "errors"]) name value errors)
-  (define error-or-errors (lookup-errors errors name))
-  (define (render error-messages)
-    `((ul ((class ,class))
-          ,@(map (lambda (error-message)
-                   `(li ,error-message)) error-messages))))
+(define ((widget-errors #:class [class "errors"]) name _value errors)
+  (define (render . error-messages)
+    `((ul ([class ,class])
+          ,@(for/list ([message (in-list error-messages)])
+              `(li ,message)))))
 
-  (cond
-    [(string? error-or-errors)
-     (render (list error-or-errors))]
+  (match (lookup-errors errors name)
+    [(? string? error-message)
+     (render error-message)]
 
-    [(list? error-or-errors)
-     (render (map (lambda (p) (string-append (car p) ": " (cdr p))) error-or-errors))]
+    [(? list? error-pairs)
+     (apply render (for/list ([pair (in-list error-pairs)])
+                     (string-append (car pair) ": " (cdr pair))))]
 
-    [else null]))
+    [_ null]))
 
 (define (xexpr/optional attribute value)
   (cond
@@ -72,24 +66,26 @@
 
 (define ((widget-input #:type [type "text"]
                        #:omit-value? [omit-value? #f]
-                       #:attributes [attributes null]) name binding errors)
+                       #:attributes [attributes null]) name binding _errors)
 
   (define value (and (not omit-value?) binding (bytes->string/utf-8 (binding:form-value binding))))
 
-  `(input ((type ,type)
-           (name ,name)
-           ,@attributes
-           ,@(xexpr/optional 'value value))))
+  `(input
+    ([type ,type]
+     [name ,name]
+     ,@attributes
+     ,@(xexpr/optional 'value value))))
 
-(define ((widget-checkbox #:attributes [attributes null]) name binding errors)
+(define ((widget-checkbox #:attributes [attributes null]) name binding _errors)
   (define value (and binding (bytes->string/utf-8 (binding:form-value binding))))
   (define checked (and value "checked"))
 
-  `(input ((type "checkbox")
-           (name ,name)
-           ,@attributes
-           ,@(xexpr/optional 'value value)
-           ,@(xexpr/optional 'checked checked))))
+  `(input
+    ([type "checkbox"]
+     [name ,name]
+     ,@attributes
+     ,@(xexpr/optional 'value value)
+     ,@(xexpr/optional 'checked checked))))
 
 (define (widget-email #:attributes [attributes null])
   (widget-input #:type "email"
@@ -113,7 +109,7 @@
                 #:omit-value? #t
                 #:attributes attributes))
 
-(define ((widget-radio-group options #:attributes [attributes null]) name binding errors)
+(define ((widget-radio-group options #:attributes [attributes null]) name binding _errors)
   (define value (and binding (bytes->string/utf-8 (binding:form-value binding))))
 
   (define (make-radio option)
@@ -132,36 +128,56 @@
 
   `(div ,@(map make-radio options)))
 
-(define ((widget-select options #:attributes [attributes null]) name binding errors)
+(define ((widget-select options #:attributes [attributes null]) name binding _errors)
   (define value (and binding (bytes->string/utf-8 (binding:form-value binding))))
 
-  (define (make-option option)
-    (define option-value (car option))
-    (define option-label (cdr option))
-    (define selected? (and value (string=? value option-value) "selected"))
+  (define (make-option opt-value opt-label)
+    (define selected?
+      (and value (string=? value opt-value) "selected"))
 
     `(option
-      ((value ,option-value)
-       ,@(xexpr/optional 'selected selected?)) ,option-label))
+      ([value ,opt-value]
+       ,@(xexpr/optional 'selected selected?))
+      ,opt-label))
+
+  (define (make-option-group group-label group-opts)
+    `(optgroup
+      ([label ,group-label])
+      ,@(for*/list ([group-option (in-list group-opts)]
+                    [opt-value (in-value (car group-option))]
+                    [opt-label (in-value (cdr group-option))])
+          (make-option opt-value opt-label))))
 
   (define options-elements
     (cond
+      ;; Supported for backwards-compatibility, but discouraged.
       [(hash? options)
-       (for/list ([(group-label options) options])
-         `(optgroup ((label ,group-label)) ,@(map make-option options)))]
+       (for/list ([(group-label group-opts) options])
+         (make-option-group group-label group-opts))]
 
       [else
-       (map make-option options)]))
+       (for/list ([opt (in-list options)])
+         (match opt
+           [(cons opt-value (? string? opt-label))
+            (make-option opt-value opt-label)]
 
-  `(select ((name ,name) ,@attributes) ,@options-elements))
+           [(list (? string? group-label) group-opts)
+            (make-option-group group-label group-opts)]))]))
+
+  `(select
+    ([name ,name]
+     ,@attributes)
+    ,@options-elements))
 
 (define (widget-text #:attributes [attributes null])
   (widget-input #:attributes attributes))
 
 (define ((widget-textarea #:omit-value? [omit-value? #f]
-                          #:attributes [attributes null]) name binding errors)
-
-  (define value (and (not omit-value?) binding (bytes->string/utf-8 (binding:form-value binding))))
-  (define value/xexpr (or (and value (list value)) null))
-
-  `(textarea ((name ,name) ,@attributes) ,@value/xexpr))
+                          #:attributes [attributes null]) name binding _errors)
+  `(textarea
+    ([name ,name]
+     ,@attributes)
+    ,@(cond
+        [omit-value? null]
+        [(not binding) null]
+        [else (list (bytes->string/utf-8 (binding:form-value binding)))])))

@@ -1,11 +1,11 @@
 #lang racket/base
 
 (require forms
-         rackunit
          racket/match
-         web-server/http)
+         rackunit)
 
-(provide widget-tests)
+(provide
+ widget-tests)
 
 (define simple-form
   (form* [(x binding/text)]
@@ -109,7 +109,30 @@
             (optgroup
              ((label "Animals"))
              (option ((value "cat")) "Cat")
-             (option ((value "dog")) "Dog"))))))))
+             (option ((value "dog")) "Dog")))))))
+
+    (test-case "can render ordered option groups"
+      (test-renderer
+       (lambda (render-widget)
+         (check-equal?
+          (render-widget "x" (widget-select (list (cons "first" "First")
+                                                  (list "Animals"
+                                                        '(("cat" . "Cat")
+                                                          ("dog" . "Dog")))
+                                                  (list "Places"
+                                                        '(("asia" . "Asia")
+                                                          ("europe" . "Europe"))))))
+          '(select
+            ((name "x"))
+            (option ([value "first"]) "First")
+            (optgroup
+             ([label "Animals"])
+             (option ([value "cat"]) "Cat")
+             (option ([value "dog"]) "Dog"))
+            (optgroup
+             ([label "Places"])
+             (option ([value "asia"]) "Asia")
+             (option ([value "europe"]) "Europe"))))))))
 
    (test-suite
     "widget-textarea"

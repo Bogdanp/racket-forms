@@ -2,6 +2,7 @@
 
 (require racket/contract/base
          racket/function
+         racket/match
          racket/string
          web-server/http
          "contracts.rkt"
@@ -75,10 +76,9 @@
 
 (define (to-number #:message [message #f])
   (lift (lambda (v)
-          (define n (string->number v))
-          (if n
-              (ok n)
-              (err (or message (translate 'err-to-number)))))))
+          (cond
+            [(string->number v) => ok]
+            [else (err (or message (translate 'err-to-number)))]))))
 
 (define (to-symbol v)
   (ok (and v (string->symbol v))))
@@ -92,13 +92,12 @@
               (err "Expected a binding:file.")))))
 
 (define binding/text
-  (lift (lambda (v)
-          (if (binding:form? v)
-              (let ([v (bytes->string/utf-8 (binding:form-value v))])
-                (if (non-empty-string? v)
-                    (ok v)
-                    (ok #f)))
-              (err "Expected a binding:form.")))))
+  (lift (match-lambda
+          [(binding:form _ (app bytes->string/utf-8 v))
+           (ok (and (non-empty-string? v) v))]
+
+          [_
+           (err "Expected a binding:form.")])))
 
 (define binding/boolean
   (ensure binding/text to-boolean))
