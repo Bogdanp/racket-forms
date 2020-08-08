@@ -341,30 +341,6 @@ reference documentation below and also check out the
 folder in the source code repository.
 
 
-@subsection[#:tag "limitations"]{Limitations}
-
-The following features are not currently supported (and may never be):
-
-@itemlist[
-  @item{
-    multi-valued form bindings
-  }
-
-  @item{
-    dynamic lists of fields and forms -- it is possible to
-    dynamically manipulate forms, but there is no nice syntax for it
-  }
-
-  @item{
-    default form values must be passed to @racket[form-run] and cannot
-    be encoded into the forms themselves -- this is inconvenient for
-    some use cases but it hugely simplifies the implementation and it
-    makes it so that the same form can be used, for example, to create
-    something and also to edit that thing
-  }
-]
-
-
 @;; Reference ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 @section[#:tag "reference"]{Reference}
