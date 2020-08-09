@@ -5,29 +5,89 @@
          racket/match
          racket/string
          web-server/http
-         "contracts.rkt"
          "l10n.rkt"
-         "unsafe/prim.rkt")
+         (submod "contract.rkt" internal)
+         (submod "prim.rkt" unsafe))
 
 (provide
  (contract-out
-  [ensure (->* (formlet/c) #:rest (listof formlet/c) formlet/c)]
+  [ensure
+   (-> formlet/c formlet/c ... formlet/c)]
 
-  [required (->* () (#:message string?) formlet/c)]
-  [matches (->* (regexp?) (#:message string?) formlet/c)]
-  [one-of (->* ((listof (cons/c any/c any/c))) (#:message string?) formlet/c)]
-  [shorter-than (->* (exact-positive-integer?) (#:message string?) formlet/c)]
-  [longer-than (->* (exact-positive-integer?) (#:message string?) formlet/c)]
-  [to-boolean formlet/c]
-  [to-number (->* () (#:message string?) formlet/c)]
-  [to-symbol formlet/c]
+  [required
+   (->* ()
+        (#:message string?)
+        (formlet-> any/c any/c #:err/c string?))]
 
-  [binding/file formlet/c]
-  [binding/text formlet/c]
-  [binding/boolean formlet/c]
-  [binding/email formlet/c]
-  [binding/number formlet/c]
-  [binding/symbol formlet/c]))
+  [matches
+   (->* (regexp?)
+        (#:message string?)
+        (formlet-> (or/c string? bytes? path? input-port? #f)
+                   (or/c string? bytes? path? input-port? #f)
+                   #:err/c string?))]
+
+  [one-of
+   (->* ((listof (cons/c any/c any/c)))
+        (#:message string?)
+        (formlet-> any/c any/c #:err/c string?))]
+
+  [shorter-than
+   (->* (exact-positive-integer?)
+        (#:message string?)
+        (formlet-> (or/c string? #f)
+                   (or/c string? #f)
+                   #:err/c string?))]
+
+  [longer-than
+   (->* (exact-positive-integer?)
+        (#:message string?)
+        (formlet-> (or/c string? #f)
+                   (or/c string? #f)
+                   #:err/c string?))]
+
+  [to-boolean
+   (formlet-> any/c boolean?)]
+
+  [to-number
+   (->* ()
+        (#:message string?)
+        (formlet-> (or/c string? #f)
+                   (or/c number? #f)
+                   #:err/c string?))]
+
+  [to-symbol
+   (formlet-> (or/c string? #f)
+              (or/c symbol? #f))]
+
+  [binding/file
+   (formlet-> (or/c binding? #f)
+              (or/c binding:file? #f)
+              #:err/c string?)]
+
+  [binding/text
+   (formlet-> (or/c binding? #f)
+              (or/c string? #f)
+              #:err/c string?)]
+
+  [binding/boolean
+   (formlet-> (or/c binding? #f)
+              boolean?
+              #:err/c string?)]
+
+  [binding/email
+   (formlet-> (or/c binding? #f)
+              (or/c string? #f)
+              #:err/c string?)]
+
+  [binding/number
+   (formlet-> (or/c binding? #f)
+              (or/c number? #f)
+              #:err/c string?)]
+
+  [binding/symbol
+   (formlet-> (or/c binding? #f)
+              (or/c symbol? #f)
+              #:err/c string?)]))
 
 (define (ensure f . gs)
   (for/fold ([f f])

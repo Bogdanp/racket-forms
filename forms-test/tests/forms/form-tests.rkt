@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require forms
+         (submod forms/private/form internal)
          racket/match
          racket/string
          rackunit
@@ -101,6 +102,14 @@
 (define form-tests
   (test-suite
    "form"
+
+   (test-suite
+    "form-lookup"
+
+    (test-case "can lookup formlets at any depth"
+      (check-false (form-lookup login-form "blah"))
+      (check-not-false (form-lookup login-form "username"))
+      (check-not-false (form-lookup signup-form "password.p1"))))
 
    (test-suite
     "form-validate"

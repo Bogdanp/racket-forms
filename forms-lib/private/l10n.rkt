@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require racket/contract
-         racket/function
          srfi/29)
 
 (provide translate)

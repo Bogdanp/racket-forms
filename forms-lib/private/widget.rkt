@@ -4,7 +4,7 @@
          racket/match
          racket/string
          web-server/http
-         "contracts.rkt")
+         "contract.rkt")
 
 (provide
  (contract-out
@@ -19,8 +19,8 @@
   [widget-hidden (->* () (#:attributes attributes/c) widget/c)]
   [widget-number (->* () (#:attributes attributes/c) widget/c)]
   [widget-password (->* () (#:attributes attributes/c) widget/c)]
-  [widget-radio-group (->* (options/c) (#:attributes attributes/c) widget/c)]
-  [widget-select (->* ((or/c (hash/c string? options/c) select-options/c)) (#:attributes attributes/c) widget/c)]
+  [widget-radio-group (->* (radio-options/c) (#:attributes attributes/c) widget/c)]
+  [widget-select (->* ((or/c (hash/c string? radio-options/c) select-options/c)) (#:attributes attributes/c) widget/c)]
   [widget-text (->* () (#:attributes attributes/c) widget/c)]
   [widget-textarea (->* () (#:omit-value? boolean?
                             #:attributes attributes/c) widget/c)]))

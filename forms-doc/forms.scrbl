@@ -346,7 +346,7 @@ reference documentation below and also check out the
          (or/c
           (list/c 'passed any/c widget-renderer/c)
           (list/c 'failed any/c widget-renderer/c)
-          (list/c 'pending false/c widget-renderer/c))]{
+          (list/c 'pending #f widget-renderer/c))]{
   Validate @racket[request] against @racket[form].
 }
 
@@ -355,40 +355,40 @@ reference documentation below and also check out the
 @deftech{Formlets} extract, validate and transform field values from
 forms.
 
-@defthing[binding/file (-> (or/c false/c binding:file?)
-                           (or/c (cons/c 'ok (or/c false/c binding:file?))
+@defthing[binding/file (-> (or/c #f binding:file?)
+                           (or/c (cons/c 'ok (or/c #f binding:file?))
                                  (cons/c 'err string?)))]{
   Extracts an optional @racket[binding:file].
 }
 
-@defthing[binding/text (-> (or/c false/c binding:form?)
-                           (or/c (cons/c 'ok (or/c false/c string?))
+@defthing[binding/text (-> (or/c #f binding:form?)
+                           (or/c (cons/c 'ok (or/c #f string?))
                                  (cons/c 'err string?)))]{
   Converts an optional @racket[binding:form] to a @racket[string?].
 }
 
-@defthing[binding/boolean (-> (or/c false/c binding:form?)
-                              (or/c (cons/c 'ok (or/c false/c boolean?))
+@defthing[binding/boolean (-> (or/c #f binding:form?)
+                              (or/c (cons/c 'ok (or/c #f boolean?))
                                     (cons/c 'err string?)))]{
   Converts an optional @racket[binding:form] to a @racket[boolean?].
 }
 
-@defthing[binding/email (-> (or/c false/c binding:form?)
-                            (or/c (cons/c 'ok (or/c false/c string?))
+@defthing[binding/email (-> (or/c #f binding:form?)
+                            (or/c (cons/c 'ok (or/c #f string?))
                                   (cons/c 'err string?)))]{
   Converts an optional @racket[binding:form] to a @racket[string?],
   ensuring that it contains something vaguely resembling an e-mail
   address.
 }
 
-@defthing[binding/number (-> (or/c false/c binding:form?)
-                             (or/c (cons/c 'ok (or/c false/c number?))
+@defthing[binding/number (-> (or/c #f binding:form?)
+                             (or/c (cons/c 'ok (or/c #f number?))
                                    (cons/c 'err string?)))]{
   Converts an optional @racket[binding:form] to a @racket[number?].
 }
 
-@defthing[binding/symbol (-> (or/c false/c binding:form?)
-                             (or/c (cons/c 'ok (or/c false/c symbol?))
+@defthing[binding/symbol (-> (or/c #f binding:form?)
+                             (or/c (cons/c 'ok (or/c #f symbol?))
                                    (cons/c 'err string?)))]{
   Converts an optional @racket[binding:form] to a @racket[symbol?].
 }
@@ -422,7 +422,7 @@ by "lifting" normal values into the formlet space.
 These functions produce basic validator formlets.
 
 @defproc[(required [#:message message string? "This field is required."])
-         (-> (or/c false/c any/c)
+         (-> (or/c #f any/c)
              (or/c (cons/c 'ok string?)
                    (cons/c 'err string?)))]{
   Ensures that a non-empty @racket[string?] value is present.
@@ -430,7 +430,7 @@ These functions produce basic validator formlets.
 
 @defproc[(matches [pattern regexp?]
                   [#:message message string? (format "This field must match the regular expression ~v." p)])
-         (-> (or/c (false/c string?))
+         (-> (or/c string? #f)
              (or/c (cons/c 'ok string?)
                    (cons/c 'err string?)))]{
   Ensures that an optional @racket[string?] matches the given @racket[pattern].
@@ -438,7 +438,7 @@ These functions produce basic validator formlets.
 
 @defproc[(one-of [pairs (listof (cons/c any/c any/c))]
                  [#:message message string? (format "This field must contain one of the following values: ~a" (string-join (map car pairs) ", "))])
-         (-> (or/c (false/c any/c))
+         (-> (or/c any/c #f)
              (or/c (cons/c 'ok any/c)
                    (cons/c 'err string?)))]{
   Ensures that an optional @racket[string?] is equal to one of the
@@ -448,7 +448,7 @@ These functions produce basic validator formlets.
 
 @defproc[(shorter-than [n exact-positive-integer?]
                        [#:message message string? (format "This field must contain ~a or fewer characters." (sub1 n))])
-         (-> (or/c (false/c string?))
+         (-> (or/c string? #f)
              (or/c (cons/c 'ok string?)
                    (cons/c 'err string?)))]{
   Ensures that an optional @racket[string?] is shorter than @racket[n].
@@ -456,7 +456,7 @@ These functions produce basic validator formlets.
 
 @defproc[(longer-than [n exact-positive-integer?]
                       [#:message message string? (format "This field must contain ~a or more characters." (add1 n))])
-         (-> (or/c (false/c string?))
+         (-> (or/c string? #f)
              (or/c (cons/c 'ok string?)
                    (cons/c 'err string?)))]{
   Ensures that an optional @racket[string?] is longer than @racket[n].
@@ -552,7 +552,7 @@ These functions produce basic validator formlets.
   ]
 }
 
-@defproc[(widget-radio-group [options options/c]
+@defproc[(widget-radio-group [options radio-options/c]
                              [#:attributes attributes attributes/c null]) widget/c]{
   Returns a widget that can render a group of @tt{<input type="radio">} elements.
 
@@ -599,7 +599,7 @@ These functions produce basic validator formlets.
   The contract for lists of validation errors.
 }
 
-@defthing[options/c (listof (cons/c string? string?))]{
+@defthing[radio-options/c (listof (cons/c string? string?))]{
   The contract for a list of @tt{<input type="radio">} options.
 }
 
@@ -611,7 +611,7 @@ These functions produce basic validator formlets.
   (@tt{<optgroup> elements}).
 }
 
-@defthing[widget/c (-> string? (or/c false/c binding?) errors/c (or/c xexpr/c (listof xexpr/c)))]{
+@defthing[widget/c (-> string? (or/c #f binding?) errors/c (or/c xexpr/c (listof xexpr/c)))]{
   The contract for @tech{widgets}.  Widgets take a field name, its
   associated binding (if any) and a list of errors and produces either
   one or a list of @racket[xexpr?]s.

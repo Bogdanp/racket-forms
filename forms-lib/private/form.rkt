@@ -4,11 +4,12 @@
                      syntax/parse)
          racket/contract/base
          racket/hash
+         racket/match
          racket/string
          web-server/http
-         "contracts.rkt"
-         "formlets.rkt"
-         "unsafe/prim.rkt")
+         "contract.rkt"
+         (submod "contract.rkt" internal)
+         (submod "prim.rkt" unsafe))
 
 (provide
  form*
@@ -17,8 +18,8 @@
   [struct form ([constructor any/c]
                 [children (listof (cons/c symbol? (or/c formlet/c form?)))])]
   [form-validate (-> form? bindings/c res/c)]
-  [form-process (->* (form? bindings/c) (#:defaults bindings/c #:submitted? boolean?) validation/c)]
-  [form-run (->* (form? request?) (#:defaults bindings/c #:submit-methods (listof bytes?)) validation/c)]))
+  [form-process (->* (form? bindings/c) (#:defaults bindings/c #:submitted? boolean?) validation-result/c)]
+  [form-run (->* (form? request?) (#:defaults bindings/c #:submit-methods (listof bytes?)) validation-result/c)]))
 
 (struct form (constructor children)
   #:transparent)
@@ -29,11 +30,11 @@
      #'(form (lambda (name ...) e ...)
              (list (cons 'name f) ...))]))
 
-(define (validate form bindings namespace)
+(define (validate f bindings namespace)
   (define-values (results errors)
     (for/fold ([results null]
                [errors null])
-              ([child (in-list (form-children form))])
+              ([child (in-list (form-children f))])
 
       (define name (car child))
       (define formlet (cdr child))
@@ -54,7 +55,7 @@
 
   (cond
     [(null? errors)
-     (define res (apply (form-constructor form) (reverse results)))
+     (define res (apply (form-constructor f) (reverse results)))
      (cond
        [(ok?  res) res]
        [(err? res) res]
@@ -62,27 +63,28 @@
 
     [else (err (reverse errors))]))
 
-(define (form-lookup form full-name)
+(define (form-lookup f full-name)
+  (define names
+    (map string->symbol (string-split full-name ".")))
   (for/fold ([formlet #f]
-             [form form]
+             [subform f]
              #:result formlet)
-            ([name (map string->symbol (string-split full-name "."))]
-             #:when form)
+            ([name (in-list names)]
+             #:when subform)
+    (match (assq name (form-children subform))
+      [#f (values #f #f)]
+      [(cons _ (? form? subform)) (values #f subform)]
+      [(cons _ formlet) (values formlet #f)])))
 
-    (define formlet-pair (assq name (form-children form)))
-    (define formlet (and formlet-pair (cdr formlet-pair)))
+(module+ internal
+  (provide form-lookup))
 
-    (cond
-      [(not formlet) (values #f #f)]
-      [(form? formlet) (values #f formlet)]
-      [else (values formlet #f)])))
+(define (form-validate f bindings)
+  (validate f bindings ""))
 
-(define (form-validate form bindings)
-  (validate form bindings ""))
+(define (combine/key/keep-newer _k1 _k2 v) v)
 
-(define (combine/key/keep-newer k _ v) v)
-
-(define (form-process form bindings
+(define (form-process f bindings
                       #:defaults [defaults (hash)]
                       #:submitted? [submitted? #t])
   (define normalized-defaults
@@ -99,7 +101,7 @@
     (hash-union normalized-defaults bindings #:combine/key combine/key/keep-newer))
 
   (define ((make-widget-renderer errors) name widget)
-    (when (not (form-lookup form name))
+    (when (not (form-lookup f name))
       (raise-user-error 'render-widget "Invalid formlet name ~v." name))
 
     (define binding (hash-ref all-bindings name #f))
@@ -107,7 +109,7 @@
 
   (cond
     [submitted?
-     (define res (form-validate form bindings))
+     (define res (form-validate f bindings))
      (if (ok? res)
          (list 'passed (cdr res) (make-widget-renderer null))
          (list 'failed (cdr res) (make-widget-renderer (cdr res))))]
@@ -115,7 +117,7 @@
     [else
      (list 'pending #f (make-widget-renderer null))]))
 
-(define (form-run form request
+(define (form-run f request
                   #:defaults [defaults (hash)]
                   #:submit-methods [submit-methods '(#"DELETE" #"PATCH" #"POST" #"PUT")])
   (define submitted? (member (request-method request) submit-methods))
@@ -124,4 +126,4 @@
               ([binding (request-bindings/raw request)])
       (hash-set bindings (bytes->string/utf-8 (binding-id binding)) binding)))
 
-  (form-process form bindings #:defaults defaults #:submitted? submitted?))
+  (form-process f bindings #:defaults defaults #:submitted? submitted?))

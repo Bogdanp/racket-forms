@@ -5,6 +5,6 @@
     (require m ...)
     (provide (all-from-out m ...))))
 
-(provide-all-from "private/formlets.rkt"
-                  "private/forms.rkt"
-                  "private/widgets.rkt")
+(provide-all-from "private/formlet.rkt"
+                  "private/form.rkt"
+                  "private/widget.rkt")
