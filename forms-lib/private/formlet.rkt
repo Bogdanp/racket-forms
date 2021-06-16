@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require racket/contract/base
+         racket/format
          racket/function
          racket/match
          racket/string
@@ -45,6 +46,13 @@
                    (or/c string? #f)
                    #:err/c string?))]
 
+  [range/inclusive
+   (->* (real? real?)
+        (#:message string?)
+        (formlet-> (or/c real? #f)
+                   (or/c real? #f)
+                   #:err/c string?))]
+
   [to-boolean
    (formlet-> any/c boolean?)]
 
@@ -53,6 +61,13 @@
         (#:message string?)
         (formlet-> (or/c string? #f)
                    (or/c number? #f)
+                   #:err/c string?))]
+
+  [to-real
+   (->* ()
+        (#:message string?)
+        (formlet-> (or/c number? #f)
+                   (or/c real? #f)
                    #:err/c string?))]
 
   [to-symbol
@@ -131,6 +146,12 @@
               (ok v)
               (err (or message (translate 'err-longer-than (add1 n))))))))
 
+(define (range/inclusive min max #:message [message #f])
+  (lift (lambda (v)
+          (if (<= min v max)
+              (ok v)
+              (err (or message (translate 'err-range/inclusive (~r min) (~r max))))))))
+
 (define (to-boolean v)
   (ok (not (not v))))
 
@@ -139,6 +160,12 @@
           (cond
             [(string->number v) => ok]
             [else (err (or message (translate 'err-to-number)))]))))
+
+(define (to-real #:message [message #f])
+  (lift (lambda (v)
+          (cond
+            [(real? v) (ok v)]
+            [else (err (or message (translate 'err-to-real)))]))))
 
 (define (to-symbol v)
   (ok (and v (string->symbol v))))

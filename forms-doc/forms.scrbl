@@ -462,6 +462,22 @@ These functions produce basic validator formlets.
   Ensures that an optional @racket[string?] is longer than @racket[n].
 }
 
+@defproc[(to-real [#:message message string? "This field must contain a real number."])
+         (-> (or/c number? #f)
+             (or/c (cons/c 'ok real?)
+                   (cons/c 'err string?)))]{
+  Ensures that an optional @racket[number?] is a @racket[real?].
+}
+
+@defproc[(range/inclusive [min real?]
+                          [max real?]
+                          [#:message message string? (format "This field must contain a number that lies between ~a and ~a, inclusive." (~r min) (~r max))])
+         (-> (or/c real? #f)
+             (or/c (cons/c 'ok real?)
+                   (cons/c 'err string?)))]{
+  Ensures that an optional @racket[real?] lies between @racket[min] and @racket[max], inclusive.
+}
+
 @subsection[#:tag "widgets"]{Widgets}
 
 @deftech{Widgets} render fields into @racket[xexpr?]s.
