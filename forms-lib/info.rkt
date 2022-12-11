@@ -1,6 +1,7 @@
 #lang info
 
-(define version "0.5.0")
+(define license 'BSD-3-Clause)
+(define version "0.5")
 (define collection "forms")
 (define deps '("base" "srfi-lite-lib" "web-server-lib"))
 (define build-deps '())
