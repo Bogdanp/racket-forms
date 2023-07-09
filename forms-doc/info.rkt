@@ -4,7 +4,7 @@
 (define collection "forms")
 
 (define scribblings
-  '(("forms.scrbl" ())))
+  '(("forms.scrbl" () ("Web Development"))))
 
 (define deps '("base"))
 (define build-deps '("forms-lib"
