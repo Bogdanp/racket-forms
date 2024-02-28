@@ -1,6 +1,8 @@
 #lang racket/base
 
-(require racket/contract/base
+(require (for-syntax racket/base
+                     syntax/parse/pre)
+         racket/contract/base
          racket/match
          racket/string
          web-server/http
@@ -9,21 +11,27 @@
 (provide
  (contract-out
   [widget-namespace (-> string? widget-renderer/c widget-renderer/c)]
-  [widget-errors (->* () (#:class string?) widget/c)]
-  [widget-input (->* () (#:type string?
-                         #:omit-value? boolean?
-                         #:attributes attributes/c) widget/c)]
-  [widget-checkbox (->* () (#:attributes attributes/c) widget/c)]
-  [widget-email (->* () (#:attributes attributes/c) widget/c)]
-  [widget-file (->* () (#:attributes attributes/c) widget/c)]
-  [widget-hidden (->* () (#:attributes attributes/c) widget/c)]
-  [widget-number (->* () (#:attributes attributes/c) widget/c)]
-  [widget-password (->* () (#:attributes attributes/c) widget/c)]
-  [widget-radio-group (->* (radio-options/c) (#:attributes attributes/c) widget/c)]
-  [widget-select (->* ((or/c (hash/c string? radio-options/c) select-options/c)) (#:attributes attributes/c) widget/c)]
-  [widget-text (->* () (#:attributes attributes/c) widget/c)]
-  [widget-textarea (->* () (#:omit-value? boolean?
-                            #:attributes attributes/c) widget/c)]))
+  [widget-errors (->* [] [#:class string?] widget/c)]
+  [widget-input (widget-> [] [#:type string? #:omit-value? boolean?])]
+  [widget-checkbox (widget->)]
+  [widget-email (widget->)]
+  [widget-file (widget->)]
+  [widget-hidden (widget->)]
+  [widget-number (widget->)]
+  [widget-password (widget->)]
+  [widget-radio-group (widget-> [radio-options/c])]
+  [widget-select (widget-> [(or/c (hash/c string? radio-options/c) select-options/c)])]
+  [widget-text (widget->)]
+  [widget-textarea (widget-> [] [#:omit-value? boolean?])]))
+
+(define-syntax (widget-> stx)
+  (syntax-parse stx
+    [(_) #'(widget-> [] [])]
+    [(_ [required-arg-ctc ...]) #'(widget-> [required-arg-ctc ...] [])]
+    [(_ [required-arg-ctc ...] [optional-arg-ctc ...])
+     #'(->* [required-arg-ctc ...]
+            [optional-arg-ctc ... #:attributes attributes/c]
+            widget/c)]))
 
 (define (lookup-errors errors full-name)
   (let loop ([path (map string->symbol (string-split full-name "."))]

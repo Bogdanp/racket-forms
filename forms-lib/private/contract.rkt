@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require racket/contract
+(require racket/contract/base
          web-server/http
          (only-in xml xexpr/c))
 
@@ -20,7 +20,6 @@
                  (or/c (cons/c 'ok ok-res/c)
                        (cons/c 'err err-res/c))))))
 
-(require 'internal)
 (provide (all-defined-out))
 
 (define attributes/c

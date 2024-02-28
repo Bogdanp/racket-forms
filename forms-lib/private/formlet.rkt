@@ -16,39 +16,39 @@
    (-> formlet/c formlet/c ... formlet/c)]
 
   [required
-   (->* ()
-        (#:message string?)
+   (->* []
+        [#:message string?]
         (formlet-> any/c any/c #:err/c string?))]
 
   [matches
-   (->* (regexp?)
-        (#:message string?)
+   (->* [regexp?]
+        [#:message string?]
         (formlet-> (or/c string? bytes? path? input-port? #f)
                    (or/c string? bytes? path? input-port? #f)
                    #:err/c string?))]
 
   [one-of
-   (->* ((listof (cons/c any/c any/c)))
-        (#:message string?)
+   (->* [(listof (cons/c any/c any/c))]
+        [#:message string?]
         (formlet-> any/c any/c #:err/c string?))]
 
   [shorter-than
-   (->* (exact-positive-integer?)
-        (#:message string?)
+   (->* [exact-positive-integer?]
+        [#:message string?]
         (formlet-> (or/c string? #f)
                    (or/c string? #f)
                    #:err/c string?))]
 
   [longer-than
-   (->* (exact-positive-integer?)
-        (#:message string?)
+   (->* [exact-positive-integer?]
+        [#:message string?]
         (formlet-> (or/c string? #f)
                    (or/c string? #f)
                    #:err/c string?))]
 
   [range/inclusive
-   (->* (real? real?)
-        (#:message string?)
+   (->* [real? real?]
+        [#:message string?]
         (formlet-> (or/c real? #f)
                    (or/c real? #f)
                    #:err/c string?))]
@@ -57,15 +57,15 @@
    (formlet-> any/c boolean?)]
 
   [to-number
-   (->* ()
-        (#:message string?)
+   (->* []
+        [#:message string?]
         (formlet-> (or/c string? #f)
                    (or/c number? #f)
                    #:err/c string?))]
 
   [to-real
-   (->* ()
-        (#:message string?)
+   (->* []
+        [#:message string?]
         (formlet-> (or/c number? #f)
                    (or/c real? #f)
                    #:err/c string?))]

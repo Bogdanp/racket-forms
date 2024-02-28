@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require (for-syntax racket/base
-                     syntax/parse)
+                     syntax/parse/pre)
          racket/contract/base
          racket/hash
          racket/match
@@ -18,8 +18,18 @@
   [struct form ([constructor any/c]
                 [children (listof (cons/c symbol? (or/c formlet/c form?)))])]
   [form-validate (-> form? bindings/c res/c)]
-  [form-process (->* (form? bindings/c) (#:defaults bindings/c #:submitted? boolean?) validation-result/c)]
-  [form-run (->* (form? request?) (#:defaults bindings/c #:submit-methods (listof bytes?)) validation-result/c)]))
+  [form-process
+   (->*
+    [form? bindings/c]
+    [#:defaults bindings/c
+     #:submitted? boolean?]
+    validation-result/c)]
+  [form-run
+   (->*
+    [form? request?]
+    [#:defaults bindings/c
+     #:submit-methods (listof bytes?)]
+    validation-result/c)]))
 
 (struct form (constructor children)
   #:transparent)

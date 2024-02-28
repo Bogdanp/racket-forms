@@ -1,13 +1,15 @@
 #lang racket/base
 
-(require racket/contract
+(require racket/contract/base
          srfi/29)
 
-(provide translate)
+(provide
+ (contract-out
+  [translate (-> symbol? any/c ... string?)]))
 
 (define bundle 'forms-lib)
 
-(define translations
+(define translations-by-locale
   '([(en) . ([err-required         . "This field is required."]
              [err-matches          . "This field must match the regular expression ~v."]
              [err-one-of           . "This field must contain one of the following values: ~a"]
@@ -27,7 +29,7 @@
              [err-to-real          . "Acest câmp trebuie să conțină un număr real."]
              [err-binding/email    . "Acest câmp trebuie să conțină o adresă de e-mail."])]))
 
-(for ([translation (in-list translations)])
+(for ([translation (in-list translations-by-locale)])
   (define locale (car translation))
   (define translations (cdr translation))
   (define specifier (apply list bundle locale))
@@ -35,11 +37,10 @@
     (declare-bundle! specifier translations)
     (store-bundle! specifier)))
 
-(define/contract (translate message-name . args)
-  (-> symbol? any/c ... string?)
+(define (translate message-name . args)
   (cond
     [(localized-template bundle message-name)
      => (lambda (message)
           (apply format message args))]
-
-    [else (symbol->string message-name)]))
+    [else
+     (symbol->string message-name)]))
