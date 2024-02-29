@@ -102,6 +102,11 @@
   [binding/symbol
    (formlet-> (or/c binding? #f)
               (or/c symbol? #f)
+              #:err/c string?)]
+
+  [binding/list
+   (formlet-> (or/c (listof binding?) #f)
+              (listof string?)
               #:err/c string?)]))
 
 (define (ensure f . gs)
@@ -182,7 +187,6 @@
   (lift (match-lambda
           [(binding:form _ (app bytes->string/utf-8 v))
            (ok (and (non-empty-string? v) v))]
-
           [_
            (err "Expected a binding:form.")])))
 
@@ -200,3 +204,18 @@
 
 (define binding/symbol
   (ensure binding/text to-symbol))
+
+(define binding/list
+  (lift (match-lambda
+          [(? list? xs)
+           (let loop ([xs xs]
+                      [ys null])
+             (match xs
+               ['()
+                (ok (reverse ys))]
+               [`(,(binding:form _ (app bytes->string/utf-8 v)) . ,xs)
+                (loop xs (cons v ys))]
+               [_
+                (err "Expected a list of binding:form values.")]))]
+          [_
+           (err "Expected a list of binding:form values.")])))

@@ -246,7 +246,27 @@
                                                 #:bindings (list (make-binding:form #"username" #"bogdan@example.com")
                                                                  (make-binding:form #"password" #"hunter1234"))))
         [(list res _ _)
-         (check-equal? res 'passed)])))))
+         (check-equal? res 'passed)]))
+
+    (test-case "can combine fields"
+      (define f
+        (form* ([xs (ensure binding/list)])
+          xs))
+      (define r
+        (make-request
+         #:method #"POST"
+         #:bindings (list
+                     (make-binding:form #"xs" #"1")
+                     (make-binding:form #"xs" #"2"))))
+      (match-define `(,status ,data ,_)
+        (form-run
+         #:combine (λ (_k v1 v2)
+                     (if (pair? v1)
+                         (cons v2 v1)
+                         (list v2 v1)))
+         f r))
+      (check-equal? status 'passed)
+      (check-equal? data '("2" "1"))))))
 
 (module+ test
   (require rackunit/text-ui)

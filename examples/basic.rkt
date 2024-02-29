@@ -2,8 +2,8 @@
 
 (require forms/base
          racket/match
-         web-server/http
-         web-server/dispatch)
+         web-server/dispatch
+         web-server/http)
 
 (struct signup-data (username password))
 
@@ -23,13 +23,13 @@
 
 (define (signup req)
   (match (form-run signup-form req)
-    [(list 'passed data _)
+    [`(passed ,_data ,_)
      (response/xexpr '(h1 "Signed up!"))]
 
-    [(list _ _ render-widget)
+    [`(,_ ,_ ,render-widget)
      (response/xexpr (render-signup-form render-widget))]))
 
-(define-values (start reverse-uri)
+(define-values (start _reverse-uri)
   (dispatch-rules
    [("") #:method (or "get" "post") signup]))
 

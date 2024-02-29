@@ -339,15 +339,22 @@ reference documentation below and also check out the
   Validate @racket[bindings] against @racket[form].
 }
 
-@defproc[(form-run [form form?]
-                   [request request?]
+@defproc[(form-run [f form?]
+                   [r request?]
+                   [#:combine combine-proc (-> any/c any/c any/c any/c) (lambda (k v1 v2) v2)]
                    [#:defaults defaults (hash/c string? binding?) (hash)]
                    [#:submit-methods submit-methods (listof bytes?) '(#"DELETE" #"PATCH" #"POST" #"PUT")])
          (or/c
           (list/c 'passed any/c widget-renderer/c)
           (list/c 'failed any/c widget-renderer/c)
           (list/c 'pending #f widget-renderer/c))]{
-  Validate @racket[request] against @racket[form].
+
+  Validates @racket[r] against @racket[f]. The @racket[#:combine]
+  argument controls how multiple bindings for the same field are
+  handled.
+
+  @history[#:changed "0.6" @elem{Added the @racket[#:combine]
+    argument.}]
 }
 
 @subsection[#:tag "formlets"]{Formlets}
