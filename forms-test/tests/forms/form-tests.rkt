@@ -252,21 +252,44 @@
       (define f
         (form* ([xs (ensure binding/list)])
           xs))
-      (define r
-        (make-request
-         #:method #"POST"
-         #:bindings (list
-                     (make-binding:form #"xs" #"1")
-                     (make-binding:form #"xs" #"2"))))
-      (match-define `(,status ,data ,_)
-        (form-run
-         #:combine (λ (_k v1 v2)
-                     (if (pair? v1)
-                         (cons v2 v1)
-                         (list v2 v1)))
-         f r))
-      (check-equal? status 'passed)
-      (check-equal? data '("2" "1"))))))
+      (define combine
+        (λ (_k v1 v2)
+          (if (pair? v1)
+              (cons v2 v1)
+              (list v2 v1))))
+
+      (test-case "no inputs"
+        (define r
+          (make-request
+           #:method #"POST"
+           #:bindings null))
+        (match-define `(,status ,data ,_)
+          (form-run #:combine combine f r))
+        (check-equal? status 'passed)
+        (check-equal? data #f))
+
+      (test-case "single input"
+        (define r
+          (make-request
+           #:method #"POST"
+           #:bindings (list
+                       (make-binding:form #"xs" #"1"))))
+        (match-define `(,status ,data ,_)
+          (form-run #:combine combine f r))
+        (check-equal? status 'passed)
+        (check-equal? data '("1")))
+
+      (test-case "multiple inputs"
+        (define r
+          (make-request
+           #:method #"POST"
+           #:bindings (list
+                       (make-binding:form #"xs" #"1")
+                       (make-binding:form #"xs" #"2"))))
+        (match-define `(,status ,data ,_)
+          (form-run #:combine combine f r))
+        (check-equal? status 'passed)
+        (check-equal? data '("2" "1")))))))
 
 (module+ test
   (require rackunit/text-ui)

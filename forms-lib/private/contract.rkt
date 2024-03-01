@@ -1,7 +1,6 @@
 #lang racket/base
 
 (require racket/contract/base
-         web-server/http
          (only-in xml xexpr/c))
 
 (module internal racket/base
@@ -36,7 +35,7 @@
                 (list/c string? (listof (cons/c string? string?))))))
 
 (define widget/c
-  (-> string? (or/c #f binding?) errors/c (or/c xexpr/c (listof xexpr/c))))
+  (-> string? (or/c #f any/c) errors/c (or/c xexpr/c (listof xexpr/c))))
 
 (define widget-renderer/c
   (-> string? widget/c (or/c xexpr/c (listof xexpr/c))))

@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/contract/base
+(require (for-syntax racket/base)
+         racket/contract/base
          racket/format
          racket/function
          racket/match
@@ -23,8 +24,8 @@
   [matches
    (->* [regexp?]
         [#:message string?]
-        (formlet-> (or/c string? bytes? path? input-port? #f)
-                   (or/c string? bytes? path? input-port? #f)
+        (formlet-> (or/c #f string? bytes? path? input-port?)
+                   (or/c #f string? bytes? path? input-port?)
                    #:err/c string?))]
 
   [one-of
@@ -35,22 +36,22 @@
   [shorter-than
    (->* [exact-positive-integer?]
         [#:message string?]
-        (formlet-> (or/c string? #f)
-                   (or/c string? #f)
+        (formlet-> (or/c #f string?)
+                   (or/c #f string?)
                    #:err/c string?))]
 
   [longer-than
    (->* [exact-positive-integer?]
         [#:message string?]
-        (formlet-> (or/c string? #f)
-                   (or/c string? #f)
+        (formlet-> (or/c #f string?)
+                   (or/c #f string?)
                    #:err/c string?))]
 
   [range/inclusive
    (->* [real? real?]
         [#:message string?]
-        (formlet-> (or/c real? #f)
-                   (or/c real? #f)
+        (formlet-> (or/c #f real?)
+                   (or/c #f real?)
                    #:err/c string?))]
 
   [to-boolean
@@ -59,54 +60,54 @@
   [to-number
    (->* []
         [#:message string?]
-        (formlet-> (or/c string? #f)
-                   (or/c number? #f)
+        (formlet-> (or/c #f string?)
+                   (or/c #f number?)
                    #:err/c string?))]
 
   [to-real
    (->* []
         [#:message string?]
-        (formlet-> (or/c number? #f)
-                   (or/c real? #f)
+        (formlet-> (or/c #f number?)
+                   (or/c #f real?)
                    #:err/c string?))]
 
   [to-symbol
-   (formlet-> (or/c string? #f)
-              (or/c symbol? #f))]
+   (formlet-> (or/c #f string?)
+              (or/c #f symbol?))]
 
   [binding/file
-   (formlet-> (or/c binding? #f)
-              (or/c binding:file? #f)
+   (formlet-> (or/c #f binding?)
+              (or/c #f binding:file?)
               #:err/c string?)]
 
   [binding/text
-   (formlet-> (or/c binding? #f)
-              (or/c string? #f)
+   (formlet-> (or/c #f binding?)
+              (or/c #f string?)
               #:err/c string?)]
 
   [binding/boolean
-   (formlet-> (or/c binding? #f)
+   (formlet-> (or/c #f binding?)
               boolean?
               #:err/c string?)]
 
   [binding/email
-   (formlet-> (or/c binding? #f)
-              (or/c string? #f)
+   (formlet-> (or/c #f binding?)
+              (or/c #f string?)
               #:err/c string?)]
 
   [binding/number
-   (formlet-> (or/c binding? #f)
-              (or/c number? #f)
+   (formlet-> (or/c #f binding?)
+              (or/c #f number?)
               #:err/c string?)]
 
   [binding/symbol
-   (formlet-> (or/c binding? #f)
-              (or/c symbol? #f)
+   (formlet-> (or/c #f binding?)
+              (or/c #f symbol?)
               #:err/c string?)]
 
   [binding/list
    (formlet-> (or/c #f binding? (listof binding?))
-              (listof string?)
+              (or/c #f (listof string?))
               #:err/c string?)]))
 
 (define (ensure f . gs)
@@ -185,7 +186,7 @@
 
 (define binding/text
   (lift (match-lambda
-          [(binding:form _ (app bytes->string/utf-8 v))
+          [(binding-value v)
            (ok (and (non-empty-string? v) v))]
           [_
            (err "Expected a binding:form.")])))
@@ -213,11 +214,17 @@
              (match xs
                ['()
                 (ok (reverse ys))]
-               [`(,(binding:form _ (app bytes->string/utf-8 v)) . ,xs)
+               [`(,(binding-value v) . ,xs)
                 (loop xs (cons v ys))]
                [_
                 (err "Expected a list of binding:form values.")]))]
-          [(binding:form _ (app bytes->string/utf-8 v))
+          [(binding-value v)
            (ok (list v))]
           [_
            (err "Expected a list of binding:form values.")])))
+
+(define-match-expander binding-value
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_ v)
+       #'(binding:form _ (app bytes->string/utf-8 v))])))
