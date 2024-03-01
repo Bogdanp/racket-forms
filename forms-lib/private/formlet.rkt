@@ -105,7 +105,7 @@
               #:err/c string?)]
 
   [binding/list
-   (formlet-> (or/c (listof binding?) #f)
+   (formlet-> (or/c #f binding? (listof binding?))
               (listof string?)
               #:err/c string?)]))
 
@@ -217,5 +217,7 @@
                 (loop xs (cons v ys))]
                [_
                 (err "Expected a list of binding:form values.")]))]
+          [(binding:form _ (app bytes->string/utf-8 v))
+           (ok (list v))]
           [_
            (err "Expected a list of binding:form values.")])))
