@@ -64,6 +64,13 @@
                    (or/c #f number?)
                    #:err/c string?))]
 
+  [to-integer
+   (->* []
+        [#:message string?]
+        (formlet-> (or/c #f number?)
+                   (or/c #f integer?)
+                   #:err/c string?))]
+
   [to-real
    (->* []
         [#:message string?]
@@ -166,6 +173,15 @@
           (cond
             [(string->number v) => ok]
             [else (err (or message (translate 'err-to-number)))]))))
+
+(define (to-integer #:message [message #f])
+  (lift (lambda (v)
+          (cond
+            [(integer? v)
+             (if (inexact? v)
+                 (ok (inexact->exact v))
+                 (ok v))]
+            [else (err (or message (translate 'err-to-integer)))]))))
 
 (define (to-real #:message [message #f])
   (lift (lambda (v)

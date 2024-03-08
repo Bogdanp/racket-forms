@@ -469,11 +469,20 @@ These functions produce basic validator formlets.
   Ensures that an optional @racket[string?] is longer than @racket[n].
 }
 
+@defproc[(to-integer [#:message message string? "This field must contain an integer."])
+         (-> (or/c number? #f)
+             (or/c (cons/c 'ok real?)
+                   (cons/c 'err string?)))]{
+  Ensures that an optional @racket[number?] is an @racket[integer?].
+
+  @history[#:added "0.6.1"]
+}
+
 @defproc[(to-real [#:message message string? "This field must contain a real number."])
          (-> (or/c number? #f)
              (or/c (cons/c 'ok real?)
                    (cons/c 'err string?)))]{
-  Ensures that an optional @racket[number?] is a @racket[real?].
+  Ensures that an optional @racket[number?] is a @racket[real?] number.
 }
 
 @defproc[(range/inclusive [min real?]
