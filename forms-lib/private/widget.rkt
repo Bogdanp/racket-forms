@@ -38,14 +38,14 @@
              [errors errors])
     (define current (car path))
     (define remaining (cdr path))
-    (define found? (assq current errors))
-
+    (define maybe-error
+      (and (pair? errors)
+           (assq current errors)))
     (cond
-      [found?
+      [maybe-error
        (if (null? remaining)
-           (cdr found?)
-           (loop remaining (cdr found?)))]
-
+           (cdr maybe-error)
+           (loop remaining (cdr maybe-error)))]
       [else #f])))
 
 (define ((widget-namespace namespace widget-renderer) name widget)
