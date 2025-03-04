@@ -4,12 +4,16 @@
          racket/contract/base
          racket/format
          racket/function
+         racket/lazy-require
          racket/match
          racket/string
          web-server/http
          "l10n.rkt"
          (submod "contract.rkt" internal)
          (submod "prim.rkt" unsafe))
+
+(lazy-require
+ [json (jsexpr? bytes->jsexpr)])
 
 (provide
  (contract-out
@@ -81,6 +85,11 @@
   [to-symbol
    (formlet-> (or/c #f string?)
               (or/c #f symbol?))]
+
+  [binding/json
+   (formlet-> (or/c #f binding?)
+              (or/c #f jsexpr?)
+              #:err/c string?)]
 
   [binding/file
    (formlet-> (or/c #f binding?)
@@ -202,10 +211,18 @@
 
 (define binding/text
   (lift (match-lambda
-          [(binding-value v)
+          [(binding-string-value v)
            (ok (and (non-empty-string? v) v))]
           [_
            (err "Expected a binding:form.")])))
+
+(define binding/json
+  (lift (match-lambda
+          [(binding-bytes-value v)
+           (with-handlers ([exn:fail? (λ (_) (err "Expected a valid JSON value."))])
+             (ok (bytes->jsexpr v)))]
+          [_
+           (err "Expected a valid JSON value.")])))
 
 (define binding/boolean
   (ensure binding/text to-boolean))
@@ -230,17 +247,23 @@
              (match xs
                ['()
                 (ok (reverse ys))]
-               [`(,(binding-value v) . ,xs)
+               [`(,(binding-string-value v) . ,xs)
                 (loop xs (cons v ys))]
                [_
                 (err "Expected a list of binding:form values.")]))]
-          [(binding-value v)
+          [(binding-string-value v)
            (ok (list v))]
           [_
            (err "Expected a list of binding:form values.")])))
 
-(define-match-expander binding-value
+(define-match-expander binding-bytes-value
   (lambda (stx)
     (syntax-case stx ()
       [(_ v)
-       #'(binding:form _ (app bytes->string/utf-8 v))])))
+       #'(binding:form _ v)])))
+
+(define-match-expander binding-string-value
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_ v)
+       #'(binding-bytes-value (app bytes->string/utf-8 v))])))
