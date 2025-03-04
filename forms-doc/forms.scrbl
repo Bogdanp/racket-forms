@@ -292,7 +292,8 @@ things like validate that two fields have the same value.
                               [p2 (ensure binding/text (required) (longer-than 8))])
                         (cond
                           [(string=? p1 p2) (ok p1)]
-                          [else (err "The passwords must match.")]))])
+                          [else (err '((p1 . "The passwords must match.")
+                                       (p2 . "The passwords must match.")))]))])
       (list username password)))
 ]
 
