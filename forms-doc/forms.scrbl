@@ -1,6 +1,7 @@
 #lang scribble/manual
 
 @(require (for-label forms
+                     json
                      racket
                      web-server/http
                      xml)
@@ -230,7 +231,8 @@ To compose the validation and the presentation aspects, we can use
 ]
 
 @demo[
-  (form-run login-form (make-request))
+  (pretty-print
+   (form-run login-form (make-request)))
 ]
 
 @racket[form-run] is smart enough to figure out whether or not the
@@ -243,23 +245,29 @@ result and a widget renderer.  That same renderer can be passed to our
   (match-define (list _ _ render-widget)
     (form-run login-form (make-request)))
 
-  (pretty-print (render-login-form render-widget))
+  (pretty-print
+   (render-login-form render-widget))
 ]
 
 If we pass it an empty @tt{POST} request instead, the data will be
 validated and a @racket['failed] result will be returned:
 
 @demo[
-  (form-run login-form (make-request #:method #"POST"))
+  (pretty-print
+   (form-run login-form (make-request #:method #"POST")))
 ]
 
 Finally, if we pass it a valid @tt{POST} request, we'll get a
 @racket['passed] result:
 
 @demo[
-  (form-run login-form (make-request #:method #"POST"
-                                     #:bindings (list (make-binding:form #"username" #"bogdan@defn.io")
-                                                      (make-binding:form #"password" #"hunter1234"))))
+  (define req
+    (make-request
+     #:method #"POST"
+     #:bindings (list (make-binding:form #"username" #"bogdan@defn.io")
+                      (make-binding:form #"password" #"hunter1234"))))
+  (pretty-print
+   (form-run login-form req))
 ]
 
 Putting it all together, we might write a request handler that looks
@@ -399,6 +407,14 @@ forms.
                              (or/c (cons/c 'ok (or/c #f symbol?))
                                    (cons/c 'err string?)))]{
   Converts an optional @racket[binding:form] to a @racket[symbol?].
+}
+
+@defthing[binding/json (-> (or/c #f binding:form?)
+                           (or/c (cons/c 'ok (or/c #f jsexpr?))
+                                 (cons/c 'err string?)))]{
+  Converts an optional @racket[binding:form] to a @racket[jsexpr?].
+
+  @history[#:added "0.7"]
 }
 
 @subsubsection[#:tag "primitives"]{Primitives}
