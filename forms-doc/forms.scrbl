@@ -369,8 +369,8 @@ reference documentation below and also check out the
   @racketblock[
     (lambda (_k v1 v2)
       (if (pair? v1)
-          (cons v2 v1)
-          (list v2 v1)))
+          (append v1 (list v2))
+          (list v1 v2)))
   ]
 
   @history[#:changed "0.6" @elem{Added the @racket[#:combine]
