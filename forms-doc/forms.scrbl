@@ -362,9 +362,9 @@ reference documentation below and also check out the
   argument controls how multiple bindings for the same field are
   handled.
 
-  For example, to combine all the bindings for a given field for use
-  with @racket[binding/list], you would pass the following procedure as
-  the @racket[#:combine] argument:
+  To combine all the bindings for a given field for use with
+  @racket[binding/list], pass the following procedure as the
+  @racket[#:combine] argument:
 
   @racketblock[
     (lambda (_k v1 v2)

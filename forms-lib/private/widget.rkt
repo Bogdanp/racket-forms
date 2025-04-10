@@ -203,7 +203,7 @@
   (define (next-id)
     (begin0 seq
       (set! seq (add1 seq))))
-  (define the-values (and value (list->vector (reverse value))))
+  (define the-values (and value (list->vector value)))
   (define the-errors
     (let ([errors (assq sym errors)])
       (and errors (list->vector (cdr errors)))))
