@@ -6,6 +6,7 @@
          racket/match
          racket/string
          web-server/http
+         (only-in xml xexpr/c)
          "contract.rkt")
 
 (provide
@@ -17,6 +18,7 @@
   [widget-email (widget->)]
   [widget-file (widget->)]
   [widget-hidden (widget->)]
+  [widget-list (-> (-> render-element/c xexpr/c) widget/c)]
   [widget-number (widget->)]
   [widget-password (widget->)]
   [widget-radio-group (widget-> [radio-options/c])]
@@ -32,6 +34,11 @@
      #'(->* [required-arg-ctc ...]
             [optional-arg-ctc ... #:attributes attributes/c]
             widget/c)]))
+
+(define render-element/c
+  (->* [widget/c]
+       [exact-nonnegative-integer?]
+       (or/c xexpr/c (listof xexpr/c))))
 
 (define (lookup-errors errors full-name)
   (let loop ([path (map string->symbol (string-split full-name "."))]
@@ -189,3 +196,26 @@
         [omit-value? null]
         [(not binding) null]
         [else (list (bytes->string/utf-8 (binding:form-value binding)))])))
+
+(define ((widget-list proc) name value errors)
+  (define sym (string->symbol name))
+  (define seq 0)
+  (define (next-id)
+    (begin0 seq
+      (set! seq (add1 seq))))
+  (define the-values (and value (list->vector (reverse value))))
+  (define the-errors
+    (let ([errors (assq sym errors)])
+      (and errors (list->vector (cdr errors)))))
+  (define (render-element widget [idx (next-id)])
+    (define element-errors
+      (cond
+        [(and the-errors (idx . < . (vector-length the-errors)))
+         (define the-error (vector-ref the-errors idx))
+         (if (equal? the-error "") null `((,sym . ,the-error)))]
+        [else null]))
+    (widget
+     #;name name
+     #;value (and the-values (vector-ref the-values idx))
+     #;errors element-errors))
+  (proc render-element))

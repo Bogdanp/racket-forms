@@ -362,6 +362,17 @@ reference documentation below and also check out the
   argument controls how multiple bindings for the same field are
   handled.
 
+  For example, to combine all the bindings for a given field for use
+  with @racket[binding/list], you would pass the following procedure as
+  the @racket[#:combine] argument:
+
+  @racketblock[
+    (lambda (_k v1 v2)
+      (if (pair? v1)
+          (cons v2 v1)
+          (list v2 v1)))
+  ]
+
   @history[#:changed "0.6" @elem{Added the @racket[#:combine]
     argument.}]
 }
@@ -417,6 +428,18 @@ forms.
   @history[#:added "0.7"]
 }
 
+@defthing[binding/list (-> (or/c #f binding:form? (listof binding:form?))
+                           (or/c (cons/c 'ok (or/c #f (listof (or/c #f string?)))
+                                 (cons/c 'err (listof string?)))))] {
+
+  Converts an optional list of @racket[binding:form]s to a list of
+  optional strings. Use this when you want to accumulate values from
+  fields with the same name into a list. To use it, you must provide a
+  @racket[#:combine] procedure to @racket[form-run].
+
+  @history[#:added "0.8"]
+}
+
 @subsubsection[#:tag "primitives"]{Primitives}
 
 These functions produce formlets either by combining other formlets or
@@ -449,7 +472,8 @@ These functions produce basic validator formlets.
          (-> (or/c #f any/c)
              (or/c (cons/c 'ok string?)
                    (cons/c 'err string?)))]{
-  Ensures that a non-empty @racket[string?] value is present.
+  Ensures that a value is present. Must be run after one of the
+  @tt{binding/} formlets.
 }
 
 @defproc[(matches [pattern regexp?]
@@ -509,6 +533,49 @@ These functions produce basic validator formlets.
              (or/c (cons/c 'ok real?)
                    (cons/c 'err string?)))]{
   Ensures that an optional @racket[real?] lies between @racket[min] and @racket[max], inclusive.
+}
+
+@defproc[(list-of [formlet (-> (or/c #f binding:form?)
+                               (or/c (cons/c 'ok any/c)
+                                     (cons/c 'err string?)))])
+         (-> (listof (or/c #f string?))
+             (or/c (cons/c 'ok (listof (or/c #f string?)))
+                   (cons/c 'err (listof string?))))]{
+
+  Ensures that every element of a @racket[binding/list] matches the
+  given @racket[formlet]. When one of the elements of the list fails
+  validation, the entire list is marked failed with valid elements
+  having @racket[""] as their error.
+
+  @examples[
+  #:eval eval
+  #:label #f
+  ((list-of binding/number) (list "123" ""))
+  ((list-of (ensure binding/number (required))) (list "123" ""))
+  ]
+
+  @history[#:added "0.8"]
+}
+
+@defproc[(list-of-length [n exact-nonnegative-integer?]
+                         [#:too-few-elements-message too-few-message string? "This field is required."]
+                         [#:too-many-elements-message too-many-message string? "This field should not exist."])
+         (-> (listof (or/c #f string?))
+             (or/c (cons/c 'ok (listof (or/c #f string?)))
+                   (cons/c 'err (listof string?))))]{
+
+  Ensures that the result of a @racket[binding/list] has exactly
+  @racket[n] elements.
+
+  @examples[
+  #:eval eval
+  #:label #f
+  ((list-of-length 3) (list "123" ""))
+  ((list-of-length 3) (list "123" "" "abc"))
+  ((list-of-length 3) (list "123" "" "abc" "foo"))
+  ]
+
+  @history[#:added "0.8"]
 }
 
 @subsection[#:tag "widgets"]{Widgets}
@@ -636,6 +703,39 @@ These functions produce basic validator formlets.
                            [widget-renderer widget-renderer/c]) widget/c]{
   Returns a widget renderer for the subform whose id is
   @racket[namespace].
+}
+
+@defproc[(widget-list [render-proc (-> (->* [widget/c]
+                                            [exact-nonnegative-integer?]
+                                            (or/c xexpr/c (listof xexpr/c)))
+                                       widget/c)]) widget/c]{
+  Returns a widget that calls @racket[render-proc] with a procedure
+  that, given a widget, renders that widget for the n-th element of a
+  list, where every invocation of the the element rendering procedure
+  increments the element index.
+
+  @examples[
+  #:eval eval
+  #:label #f
+  #:no-prompt
+  (define the-widget
+    (widget-list
+     (lambda (render-element)
+       `(div
+         (label "Element 1:" ,(render-element (widget-number)))
+         ,@(render-element (widget-errors) 0)
+         (label "Element 2:" ,(render-element (widget-text)))
+         ,@(render-element (widget-errors) 1)))))
+  (pretty-print
+   (the-widget
+    "example"
+    (list
+     (binding:form #"example" #"")
+     (binding:form #"example" #""))
+    null))
+  ]
+
+  @history[#:added "0.8"]
 }
 
 @subsubsection{Contracts}

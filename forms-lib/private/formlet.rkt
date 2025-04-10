@@ -5,6 +5,7 @@
          racket/format
          racket/function
          racket/lazy-require
+         racket/list
          racket/match
          racket/string
          web-server/http
@@ -86,6 +87,22 @@
    (formlet-> (or/c #f string?)
               (or/c #f symbol?))]
 
+  [list-of
+   (-> (formlet-> (or/c #f binding?)
+                  any/c
+                  #:err/c string?)
+       (formlet-> (listof (or/c #f string?))
+                  (listof (or/c #f any/c))
+                  #:err/c (listof string?)))]
+
+  [list-of-length
+   (->* [exact-nonnegative-integer?]
+        [#:too-few-elements-message string?
+         #:too-many-elements-message string?]
+        (formlet-> (listof (or/c #f string?))
+                   (listof (or/c #f string?))
+                   #:err/c (listof string?)))]
+
   [binding/json
    (formlet-> (or/c #f binding?)
               (or/c #f jsexpr?)
@@ -123,7 +140,7 @@
 
   [binding/list
    (formlet-> (or/c #f binding? (listof binding?))
-              (or/c #f (listof string?))
+              (or/c #f (listof (or/c #f string?)))
               #:err/c string?)]))
 
 (define (ensure f . gs)
@@ -201,6 +218,47 @@
 (define (to-symbol v)
   (ok (and v (string->symbol v))))
 
+(define ((list-of formlet) lst)
+  (define res
+    (for/fold ([res (ok null)])
+              ([v (in-list lst)])
+      (match (formlet (binding:form #"" (if v (string->bytes/utf-8 v) #"")))
+        [`(ok . ,v)
+         (match res
+           [`(ok . ,vs)
+            (ok (cons v vs))]
+           [`(err . ,errs)
+            (err (cons "" errs))])]
+        [`(err . ,e)
+         (match res
+           [`(ok . ,vs)
+            (err (cons e (make-list (length vs) "")))]
+           [`(err . ,errs)
+            (err (cons e errs))])])))
+  (match res
+    [`(ok . ,vs)
+     (ok (reverse vs))]
+    [`(err . ,errs)
+     (err (reverse errs))]))
+
+(define ((list-of-length
+          #:too-few-elements-message [too-few-message (translate 'err-list-elt-required)]
+          #:too-many-elements-message [too-many-message (translate 'err-list-elt-overflow)]
+          n) lst)
+  (cond
+    [((length lst) . = . n)
+     (ok lst)]
+    [((length lst) . > . n)
+     (err
+      (append
+       (make-list n "")
+       (make-list ((length lst) . - . n) too-many-message)))]
+    [else
+     (err
+      (append
+       (make-list (length lst) "")
+       (make-list (n . - . (length lst)) too-few-message)))]))
+
 (define binding/file
   (lift (lambda (v)
           (if (and (binding:file? v))
@@ -212,7 +270,7 @@
 (define binding/text
   (lift (match-lambda
           [(binding-string-value v)
-           (ok (and (non-empty-string? v) v))]
+           (ok v)]
           [_
            (err "Expected a binding:form.")])))
 
@@ -266,4 +324,8 @@
   (lambda (stx)
     (syntax-case stx ()
       [(_ v)
-       #'(binding-bytes-value (app bytes->string/utf-8 v))])))
+       #'(binding-bytes-value (app parse-bytes v))])))
+
+(define (parse-bytes bs)
+  (let ([s (bytes->string/utf-8 bs)])
+    (and (non-empty-string? s) s)))
