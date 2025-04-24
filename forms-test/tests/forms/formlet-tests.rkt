@@ -148,6 +148,9 @@
                 binding/number
                 (required))))])
         (check-equal?
+         (f #f)
+         '(ok))
+        (check-equal?
          (f (list (make-binding "")))
          '(err "This field is required."))
         (check-equal?
@@ -170,6 +173,9 @@
                (ensure binding/number (required))
                (ensure binding/symbol (required))
                (ensure binding/boolean)))])
+        (check-equal?
+         (f #f)
+         `(err ,@(make-list 3 (translate 'err-list-elt-required))))
         (check-equal?
          (f (list (make-binding "")))
          `(err "This field is required."
