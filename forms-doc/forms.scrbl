@@ -536,10 +536,10 @@ These functions produce basic validator formlets.
 }
 
 @defproc[(list-of [formlet (-> (or/c #f binding:form?)
-                               (or/c (cons/c 'ok any/c)
+                               (or/c (cons/c 'ok v)
                                      (cons/c 'err string?)))])
          (-> (listof (or/c #f string?))
-             (or/c (cons/c 'ok (listof (or/c #f string?)))
+             (or/c (cons/c 'ok (listof v))
                    (cons/c 'err (listof string?))))]{
 
   Ensures that every element of a @racket[binding/list] matches the
@@ -555,6 +555,35 @@ These functions produce basic validator formlets.
   ]
 
   @history[#:added "0.8"]
+}
+
+@defproc[(list-of* [formlet (-> (or/c #f binding:form?)
+                                (or/c (cons/c 'ok v)
+                                      (cons/c 'err string?)))] ...)
+         (-> (list (or/c #f string?) ...)
+             (or/c (cons/c 'ok (list v ...))
+                   (cons/c 'err (listof string?))))]{
+
+  Like @racket[list-of], but ensures that the elements of a
+  @racket[binding/list] match the given set of @racket[formlet]s, in
+  sequence.
+
+  @examples[
+  #:eval eval
+  #:label #f
+  ((list-of* binding/number binding/symbol)
+   (list "123" "hello"))
+  ((list-of*
+    (ensure binding/number (required))
+    (ensure binding/symbol (required)))
+   (list "123" ""))
+  ((list-of*
+    (ensure binding/number (required))
+    (ensure binding/symbol (required)))
+   (list "" "hello"))
+  ]
+
+  @history[#:added "0.9"]
 }
 
 @defproc[(list-of-length [n exact-nonnegative-integer?]

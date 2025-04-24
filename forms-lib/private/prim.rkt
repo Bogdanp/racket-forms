@@ -4,6 +4,7 @@
          (submod "contract.rkt" internal))
 
 (module unsafe racket/base
+  (require racket/match)
   (provide (all-defined-out))
 
   (define (ok v)
@@ -18,11 +19,22 @@
   (define (err? res)
     (and (pair? res) (eq? 'err (car res))))
 
+  (define (bimap fa fb v)
+    (bind2
+     (compose1 ok fa)
+     (compose1 err fb)
+     v))
+
   (define ((bind fa fb) v)
     (define res (fa v))
     (cond
       [(ok? res) (fb (cdr res))]
-      [else res])))
+      [else res]))
+
+  (define (bind2 fok ferr v)
+    (match v
+      [`(ok . ,V) (fok V)]
+      [`(err . ,V) (ferr V)])))
 
 (require 'unsafe)
 (provide

@@ -1,6 +1,8 @@
 #lang racket/base
 
 (require forms
+         forms/private/l10n
+         racket/list
          rackunit
          srfi/29
          web-server/http)
@@ -76,6 +78,16 @@
         (check-equal? (binding/symbol (make-binding "a long symbol")) (ok '|a long symbol|))))
 
      (test-suite
+      "binding/list"
+
+      (test-case "handles lists of bindings"
+        (check-equal? (binding/list #f) (ok #f))
+        (check-equal? (binding/list (map make-binding '(""))) (ok (list #f)))
+        (check-equal? (binding/list (map make-binding '("" ""))) (ok (list #f #f)))
+        (check-equal? (binding/list (map make-binding '("a"))) (ok (list "a")))
+        (check-equal? (binding/list (map make-binding '("a" "b"))) (ok (list "a" "b")))))
+
+     (test-suite
       "required"
 
       (test-case "can error given #f"
@@ -123,7 +135,55 @@
 
         (check-equal?
          ((ensure binding/symbol (one-of '((a . a)
-                                           (b . b)))) (make-binding "a")) (ok 'a)))))))
+                                           (b . b)))) (make-binding "a")) (ok 'a))))
+
+     (test-suite
+      "list-of"
+
+      (let ([f
+             (ensure
+              binding/list
+              (list-of
+               (ensure
+                binding/number
+                (required))))])
+        (check-equal?
+         (f (list (make-binding "")))
+         '(err "This field is required."))
+        (check-equal?
+         (f (map make-binding '("1" "25")))
+         '(ok 1 25))
+        (check-equal?
+         (f (map make-binding '("1" "25" "blah")))
+         '(err "" "" "This field must contain a number."))
+        (check-equal?
+         (f (map make-binding '("1" "25" "blah" "blah")))
+         '(err "" "" "This field must contain a number." "This field must contain a number."))))
+
+     (test-suite
+      "list-of*"
+
+      (let ([f
+             (ensure
+              binding/list
+              (list-of*
+               (ensure binding/number (required))
+               (ensure binding/symbol (required))
+               (ensure binding/boolean)))])
+        (check-equal?
+         (f (list (make-binding "")))
+         `(err "This field is required."
+               ,(translate 'err-list-elt-required)
+               ,(translate 'err-list-elt-required)))
+        (check-equal?
+         (f (map make-binding '("1" "25")))
+         `(err "" "" ,(translate 'err-list-elt-required)))
+        (check-equal?
+         (f (map make-binding '("1" "hi" "blah")))
+         '(ok 1 hi #t))
+        (check-equal?
+         (f (map make-binding '("1" "hi" "blah" "foo")))
+         `(err ,@(make-list 3 (translate 'err-list-elt-overflow)))))))))
 
 (module+ test
   (require rackunit/text-ui)

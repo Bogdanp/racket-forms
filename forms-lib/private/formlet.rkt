@@ -95,6 +95,18 @@
                   (listof (or/c #f any/c))
                   #:err/c (listof string?)))]
 
+  [list-of*
+   (->* []
+        [#:too-few-elements-message string?
+         #:too-many-elements-message string?]
+        #:rest (listof
+                (formlet-> (or/c #f binding?)
+                           any/c
+                           #:err/c string?))
+        (formlet-> (listof (or/c #f string?))
+                   (listof (or/c #f any/c))
+                   #:err/c (listof string?)))]
+
   [list-of-length
    (->* [exact-nonnegative-integer?]
         [#:too-few-elements-message string?
@@ -224,22 +236,51 @@
               ([v (in-list lst)])
       (match (formlet (binding:form #"" (if v (string->bytes/utf-8 v) #"")))
         [`(ok . ,v)
-         (match res
-           [`(ok . ,vs)
-            (ok (cons v vs))]
-           [`(err . ,errs)
-            (err (cons "" errs))])]
+         (bimap
+          (λ (vs) (cons v vs))
+          (λ (errs) (cons "" errs))
+          res)]
         [`(err . ,e)
-         (match res
-           [`(ok . ,vs)
-            (err (cons e (make-list (length vs) "")))]
-           [`(err . ,errs)
-            (err (cons e errs))])])))
-  (match res
-    [`(ok . ,vs)
-     (ok (reverse vs))]
-    [`(err . ,errs)
-     (err (reverse errs))]))
+         (bind2
+          (λ (vs) (err (cons e (make-list (length vs) ""))))
+          (λ (errs) (err (cons e errs)))
+          res)])))
+  (bimap reverse reverse res))
+
+(define ((list-of*
+          #:too-few-elements-message [too-few-message (translate 'err-list-elt-required)]
+          #:too-many-elements-message [too-many-message (translate 'err-list-elt-overflow)]
+          . formlets) lst)
+  (define n (length formlets))
+  (define m (length lst))
+  (define res
+    (for/fold ([res (ok null)])
+              ([formlet (in-list formlets)]
+               [v (in-list lst)])
+      (match (formlet (binding:form #"" (if v (string->bytes/utf-8 v) #"")))
+        [`(ok . ,v)
+         (bimap
+          (λ (vs) (cons v vs))
+          (λ (errs) (cons "" errs))
+          res)]
+        [`(err . ,e)
+         (bind2
+          (λ (vs) (err (cons e (make-list (length vs) ""))))
+          (λ (errs) (err (cons e errs)))
+          res)])))
+  (cond
+    [(n . = . m)
+     (bimap reverse reverse res)]
+    [(n . < . m)
+     (bind2
+      (λ (_) (err (make-list n too-many-message)))
+      (λ (errs) (err (append errs (make-list (m . - . n) too-many-message))))
+      res)]
+    [else
+     (bind2
+      (λ (_) (err (append (make-list m "") (make-list (n . - . m) too-few-message))))
+      (λ (errs) (err (append errs (make-list (n . - . m) too-few-message))))
+      res)]))
 
 (define ((list-of-length
           #:too-few-elements-message [too-few-message (translate 'err-list-elt-required)]
