@@ -735,7 +735,7 @@ These functions produce basic validator formlets.
 }
 
 @defproc[(widget-list [render-proc (-> (->* [widget/c]
-                                            [exact-nonnegative-integer?]
+                                            [(or/c #f exact-nonnegative-integer?)]
                                             (or/c xexpr/c (listof xexpr/c)))
                                        widget/c)]) widget/c]{
   Returns a widget that calls @racket[render-proc] with a procedure
@@ -764,7 +764,10 @@ These functions produce basic validator formlets.
     null))
   ]
 
-  @history[#:added "0.8"]
+  @history[
+   #:changed "0.10" @elem{The @racket[render-element] procedure accepts @racket[#f].}
+   #:added "0.8"
+  ]
 }
 
 @subsubsection{Contracts}

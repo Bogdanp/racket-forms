@@ -37,7 +37,7 @@
 
 (define render-element/c
   (->* [widget/c]
-       [exact-nonnegative-integer?]
+       [(or/c #f exact-nonnegative-integer?)]
        (or/c xexpr/c (listof xexpr/c))))
 
 (define (lookup-errors errors full-name)
@@ -203,7 +203,11 @@
   (define (next-id)
     (begin0 seq
       (set! seq (add1 seq))))
-  (define the-values (and value (list->vector value)))
+  (define the-values
+    (and value
+         (if (list? value)
+             (list->vector value)
+             (vector value))))
   (define the-errors
     (let ([errors (assq sym errors)])
       (and errors (list->vector (cdr errors)))))
@@ -216,6 +220,16 @@
         [else null]))
     (widget
      #;name name
-     #;value (and the-values (vector-ref the-values idx))
+     #;value (cond
+               [idx
+                (and the-values
+                     (idx . < . (vector-length the-values))
+                     (vector-ref the-values idx))]
+               [else
+                ;; A #f index means that the widget would like to see all the
+                ;; values that were sent. This is helpful when implementing lists
+                ;; of checkboxes because we care about the set of values sent in
+                ;; the form, but want to ignore their order.
+                (if the-values (vector->list the-values) null)])
      #;errors element-errors))
   (proc render-element))
