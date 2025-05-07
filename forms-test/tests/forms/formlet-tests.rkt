@@ -85,7 +85,23 @@
         (check-equal? (binding/list (map make-binding '(""))) (ok (list #f)))
         (check-equal? (binding/list (map make-binding '("" ""))) (ok (list #f #f)))
         (check-equal? (binding/list (map make-binding '("a"))) (ok (list "a")))
-        (check-equal? (binding/list (map make-binding '("a" "b"))) (ok (list "a" "b")))))
+        (check-equal? (binding/list (map make-binding '("a" "b"))) (ok (list "a" "b"))))
+
+      (test-case "raises a detailed contract error when called accidentally"
+        (check-exn
+         (lambda (e)
+           (and (regexp-match? #rx"binding/list: contract violation" (exn-message e))
+                (regexp-match? #rx"received: 0 arguments" (exn-message e))
+                (regexp-match? #rx"expected: 1 non-keyword argument" (exn-message e))))
+         (lambda ()
+           (binding/list)))
+        (check-exn
+         (lambda (e)
+           (and (regexp-match? #rx"binding/list: contract violation" (exn-message e))
+                (regexp-match? #rx"received: 3 arguments" (exn-message e))
+                (regexp-match? #rx"expected: 1 non-keyword argument" (exn-message e))))
+         (lambda ()
+           (binding/list 1 2 3)))))
 
      (test-suite
       "required"

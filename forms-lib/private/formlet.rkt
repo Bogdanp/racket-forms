@@ -9,8 +9,8 @@
          racket/match
          racket/string
          web-server/http
-         "l10n.rkt"
          (submod "contract.rkt" internal)
+         "l10n.rkt"
          (submod "prim.rkt" unsafe))
 
 (lazy-require
@@ -160,10 +160,11 @@
             ([g gs])
     (bind f g)))
 
-(define ((lift f) v)
-  (if v
-      (f v)
-      (ok v)))
+(define (lift who f)
+  (case-lambda
+    [() (raise-arity-error who 1)]
+    [(v) (if v (f v) (ok v))]
+    [args (apply raise-arity-error who 1 args)]))
 
 (define ((required #:message [message #f]) v)
   (if v
@@ -171,61 +172,77 @@
       (err (or message (translate 'err-required)))))
 
 (define (matches p #:message [message #f])
-  (lift (lambda (v)
-          (if (regexp-match? p v)
-              (ok v)
-              (err (or message (translate 'err-matches p)))))))
+  (lift
+   'matches
+   (lambda (v)
+     (if (regexp-match? p v)
+         (ok v)
+         (err (or message (translate 'err-matches p)))))))
 
 (define (one-of pairs #:message [message #f])
-  (lift (lambda (v)
-          (cond
-            [(findf (lambda (pair)
-                      (equal? v (car pair))) pairs)
-             => (compose1 ok cdr)]
+  (lift
+   'one-of
+   (lambda (v)
+     (cond
+       [(findf (lambda (pair)
+                 (equal? v (car pair))) pairs)
+        => (compose1 ok cdr)]
 
-            [else (err (or message (translate 'err-one-of (string-join (map (compose1 (curry format "~a") car) pairs) ", "))))]))))
+       [else (err (or message (translate 'err-one-of (string-join (map (compose1 (curry format "~a") car) pairs) ", "))))]))))
 
 (define (shorter-than n #:message [message #f])
-  (lift (lambda (v)
-          (if (< (string-length v) n)
-              (ok v)
-              (err (or message (translate 'err-shorter-than (sub1 n))))))))
+  (lift
+   'shorter-than
+   (lambda (v)
+     (if (< (string-length v) n)
+         (ok v)
+         (err (or message (translate 'err-shorter-than (sub1 n))))))))
 
 (define (longer-than n #:message [message #f])
-  (lift (lambda (v)
-          (if (> (string-length v) n)
-              (ok v)
-              (err (or message (translate 'err-longer-than (add1 n))))))))
+  (lift
+   'longer-than
+   (lambda (v)
+     (if (> (string-length v) n)
+         (ok v)
+         (err (or message (translate 'err-longer-than (add1 n))))))))
 
 (define (range/inclusive min max #:message [message #f])
-  (lift (lambda (v)
-          (if (<= min v max)
-              (ok v)
-              (err (or message (translate 'err-range/inclusive (~r min) (~r max))))))))
+  (lift
+   'range/inclusive
+   (lambda (v)
+     (if (<= min v max)
+         (ok v)
+         (err (or message (translate 'err-range/inclusive (~r min) (~r max))))))))
 
 (define (to-boolean v)
   (ok (not (not v))))
 
 (define (to-number #:message [message #f])
-  (lift (lambda (v)
-          (cond
-            [(string->number v) => ok]
-            [else (err (or message (translate 'err-to-number)))]))))
+  (lift
+   'to-number
+   (lambda (v)
+     (cond
+       [(string->number v) => ok]
+       [else (err (or message (translate 'err-to-number)))]))))
 
 (define (to-integer #:message [message #f])
-  (lift (lambda (v)
-          (cond
-            [(integer? v)
-             (if (inexact? v)
-                 (ok (inexact->exact v))
-                 (ok v))]
-            [else (err (or message (translate 'err-to-integer)))]))))
+  (lift
+   'to-integer
+   (lambda (v)
+     (cond
+       [(integer? v)
+        (if (inexact? v)
+            (ok (inexact->exact v))
+            (ok v))]
+       [else (err (or message (translate 'err-to-integer)))]))))
 
 (define (to-real #:message [message #f])
-  (lift (lambda (v)
-          (cond
-            [(real? v) (ok v)]
-            [else (err (or message (translate 'err-to-real)))]))))
+  (lift
+   'to-real
+   (lambda (v)
+     (cond
+       [(real? v) (ok v)]
+       [else (err (or message (translate 'err-to-real)))]))))
 
 (define (to-symbol v)
   (ok (and v (string->symbol v))))
@@ -302,27 +319,33 @@
        (make-list (n . - . (length lst)) too-few-message)))]))
 
 (define binding/file
-  (lift (lambda (v)
-          (if (and (binding:file? v))
-              (if (bytes=? (binding:file-filename v) #"")
-                  (ok #f)
-                  (ok v))
-              (err "Expected a binding:file.")))))
+  (lift
+   'binding/file
+   (lambda (v)
+     (if (and (binding:file? v))
+         (if (bytes=? (binding:file-filename v) #"")
+             (ok #f)
+             (ok v))
+         (err "Expected a binding:file.")))))
 
 (define binding/text
-  (lift (match-lambda
-          [(binding-string-value v)
-           (ok v)]
-          [_
-           (err "Expected a binding:form.")])))
+  (lift
+   'binding/text
+   (match-lambda
+     [(binding-string-value v)
+      (ok v)]
+     [_
+      (err "Expected a binding:form.")])))
 
 (define binding/json
-  (lift (match-lambda
-          [(binding-bytes-value v)
-           (with-handlers ([exn:fail? (λ (_) (err "Expected a valid JSON value."))])
-             (ok (bytes->jsexpr v)))]
-          [_
-           (err "Expected a valid JSON value.")])))
+  (lift
+   'binding/json
+   (match-lambda
+     [(binding-bytes-value v)
+      (with-handlers ([exn:fail? (λ (_) (err "Expected a valid JSON value."))])
+        (ok (bytes->jsexpr v)))]
+     [_
+      (err "Expected a valid JSON value.")])))
 
 (define binding/boolean
   (ensure binding/text to-boolean))
@@ -340,21 +363,23 @@
   (ensure binding/text to-symbol))
 
 (define binding/list
-  (lift (match-lambda
-          [(? list? xs)
-           (let loop ([xs xs]
-                      [ys null])
-             (match xs
-               ['()
-                (ok (reverse ys))]
-               [`(,(binding-string-value v) . ,xs)
-                (loop xs (cons v ys))]
-               [_
-                (err "Expected a list of binding:form values.")]))]
-          [(binding-string-value v)
-           (ok (list v))]
+  (lift
+   'binding/list
+   (match-lambda
+     [(? list? xs)
+      (let loop ([xs xs]
+                 [ys null])
+        (match xs
+          ['()
+           (ok (reverse ys))]
+          [`(,(binding-string-value v) . ,xs)
+           (loop xs (cons v ys))]
           [_
-           (err "Expected a list of binding:form values.")])))
+           (err "Expected a list of binding:form values.")]))]
+     [(binding-string-value v)
+      (ok (list v))]
+     [_
+      (err "Expected a list of binding:form values.")])))
 
 (define-match-expander binding-bytes-value
   (lambda (stx)
