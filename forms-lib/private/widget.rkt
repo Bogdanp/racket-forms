@@ -210,7 +210,18 @@
              (vector value))))
   (define the-errors
     (let ([errors (assq sym errors)])
-      (and errors (list->vector (cdr errors)))))
+      (define the-error-list (and errors (cdr errors)))
+      (when (and the-error-list (not (pair? the-error-list)))
+        (error 'widget-list
+               (string-join
+                '("invalid error list"
+                  "  in field: ~a"
+                  "  expected: a list of errors"
+                  "  got: ~e"
+                  "  hint: maybe use binding/list instead of some other binding")
+                "\n")
+               name the-error-list))
+      (and errors (list->vector the-error-list))))
   (define (render-element widget [idx (next-id)])
     (define element-errors
       (cond
