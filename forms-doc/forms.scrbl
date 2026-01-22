@@ -780,7 +780,7 @@ These functions produce basic validator formlets.
   The contract for lists of validation errors.
 }
 
-@defthing[radio-options/c (listof (cons/c string? string?))]{
+@defthing[radio-options/c (listof (cons/c string? xexpr/c))]{
   The contract for a list of @tt{<input type="radio">} options.
 }
 

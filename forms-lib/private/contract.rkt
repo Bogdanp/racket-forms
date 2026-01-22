@@ -4,7 +4,7 @@
          (only-in xml xexpr/c))
 
 (module internal racket/base
-  (require racket/contract)
+  (require racket/contract/base)
   (provide (all-defined-out))
 
   (define res/c (cons/c (or/c 'ok 'err) any/c))
@@ -28,7 +28,7 @@
   (listof (or/c string? (cons/c symbol? (or/c string? (recursive-contract errors/c))))))
 
 (define radio-options/c
-  (listof (cons/c string? string?)))
+  (listof (cons/c string? xexpr/c)))
 
 (define select-options/c
   (listof (or/c (cons/c string? string?)
